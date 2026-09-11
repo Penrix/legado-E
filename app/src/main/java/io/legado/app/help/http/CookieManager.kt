@@ -5,6 +5,7 @@ import io.legado.app.constant.AppLog
 import io.legado.app.data.appDb
 import io.legado.app.help.CacheManager
 import io.legado.app.utils.NetworkUtils
+import io.legado.app.utils.removeCookie
 import io.legado.app.utils.splitNotBlank
 import okhttp3.Cookie
 import okhttp3.Headers
@@ -140,14 +141,21 @@ object CookieManager {
         }
     }
 
+    /**
+     * Restore only the requested site's cookies into WebView.
+     *
+     * Upstream used removeSessionCookies(null), which logs every other WebView site out whenever
+     * one site is opened. A private multi-site client must isolate sessions by domain instead.
+     */
     fun applyToWebView(url: String) {
         val baseUrl = NetworkUtils.getBaseUrl(url) ?: return
         val cookies = CookieStore.getCookie(url).splitNotBlank(";")
         val cookieManager = CookieManager.getInstance()
-        cookieManager.removeSessionCookies(null)
+        cookieManager.removeCookie(baseUrl)
         cookies.forEach {
             cookieManager.setCookie(baseUrl, it)
         }
+        cookieManager.flush()
     }
 
     fun List<Cookie>.getString() = buildString {
