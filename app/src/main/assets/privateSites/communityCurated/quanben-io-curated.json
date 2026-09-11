@@ -1,0 +1,43 @@
+{
+  "bookSourceComment": "Penrix 社区精选 · 全本小说 quanben.io。基线参考源仓库 天天的鸟蛋 2025-06-24 规则；保留其无需 WebView 的正文解密与完整目录拼接，私人版改用普通移动 UA、独立 origin，并纳入自动更新。社区基线：https://www.yckceo.com/yuedu/shuyuan/content/id/6267.html",
+  "bookSourceGroup": "Penrix 社区精选",
+  "bookSourceName": "全本小说 · 精选",
+  "bookSourceType": 0,
+  "bookSourceUrl": "https://www.quanben.io/?penrix_curated=quanbenio",
+  "bookUrlPattern": "https?:\\/\\/(?:www\\.)?quanben\\.io\\/n\\/[^?#/]+\\/?$",
+  "customOrder": -7890,
+  "enabled": true,
+  "enabledCookieJar": true,
+  "enabledExplore": true,
+  "header": "{\"User-Agent\":\"Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0 Mobile Safari/537.36\",\"Referer\":\"https://www.quanben.io/\"}",
+  "jsLib": "function penrixBase64(s){var chars='PXhw7UT1B0a9kQDKZsjIASmOezxYG4CHo5Jyfg2b8FLpEvRr3WtVnlqMidu6cN';var out='';for(var i=0;i<s.length;i++){var n=chars.indexOf(s[i]);var c=n<0?s[i]:chars[(n+3)%62];var n1=parseInt(Math.random()*62,10);var n2=parseInt(Math.random()*62,10);out+=chars[n1]+c+chars[n2];}return out;}function penrixShiftEntities(str){var arr=[];for(var i=0;i<str.length;i++){var r=str.charCodeAt(i);arr.push('&#'+(r>=0&&r<=127?r:r-1)+';');}return arr.join('');}function penrixProcessHTML(html){var re=/<p\\b[^>]*>.*?<\\/p>/gis;var ps=html.match(re)||[];for(var i=10;i<ps.length;i++){if(i===10||i===11){ps[i]=ps[i].replace(/(<p\\b[^>]*>).*?(<\\/p>)/s,'$1...$2');}else if(i%2===0){var m=ps[i].match(/<p\\b[^>]*>(.*?)<\\/p>/s);if(m){var attrs=(ps[i].match(/<p\\b([^>]*)>/s)||['',''])[1];ps[i]='<p'+attrs+'>'+penrixShiftEntities(m[1])+'</p>';}}}var idx=0;return html.replace(re,function(){var v=ps[idx]||'';idx++;return v;});}",
+  "searchUrl": "/index.php?c=book&a=search&keywords={{key}}",
+  "exploreUrl": "玄幻::/c/xuanhuan_{{page}}.html\n都市::/c/dushi_{{page}}.html\n历史::/c/lishi_{{page}}.html\n仙侠::/c/xianxia_{{page}}.html\n科幻::/c/kehuan_{{page}}.html\n游戏::/c/youxi_{{page}}.html\n悬疑::/c/xuanyi_{{page}}.html\n军事::/c/junshi_{{page}}.html\n其它::/c/qita_{{page}}.html",
+  "ruleSearch": {
+    "bookList": ".box>.row",
+    "name": "h3@text",
+    "author": "[itemprop=\"author\"]@text",
+    "bookUrl": "h3@a@href",
+    "coverUrl": "img@src",
+    "intro": "[itemprop=\"description\"]@text"
+  },
+  "ruleExplore": {},
+  "ruleBookInfo": {
+    "name": "[property$=book_name]@content",
+    "author": "[property$=author]@content",
+    "intro": "[property$=description]@content",
+    "kind": "[property~=category|status]@content",
+    "coverUrl": "[property$=image]@content",
+    "tocUrl": "text.章节列表@href"
+  },
+  "ruleToc": {
+    "chapterList": "<js>var r1=java.getString('.list3.0@html',src);var r3=java.getString('.list3.1@html',src);var cm=String(src).match(/var callback\\s*=\\s*'([^']+)'/);var bm=String(src).match(/load_more\\('(\\d+)'\\)/);if(!cm||!bm){r1+r3;}else{var callback=cm[1];var bookId=bm[1];var head=JSON.stringify({headers:{Referer:String(baseUrl)}});var url='https://www.quanben.io/index.php?c=book&a=list.jsonp&callback='+callback+'&book_id='+bookId+'&b='+penrixBase64(callback)+','+head;var raw=String(java.ajax(url)||'');var re=new RegExp(callback.replace(/[.*+?^${}()|[\\]\\\\]/g,'\\\\$&')+'\\\\((.*)\\\\)');var m=raw.match(re);if(!m){r1+r3;}else{var inner=m[1];var m2=inner.match(/^\\((.*)\\)$/s);var obj=JSON.parse(m2?m2[1]:inner);r1+String(obj.content||'')+r3;}}</js>\n.list3@li@a",
+    "chapterName": "text",
+    "chapterUrl": "href"
+  },
+  "ruleContent": {
+    "content": "#content p@html<js>penrixProcessHTML(String(result||''));</js>",
+    "replaceRegex": "##\\s*(?:请记住本站域名|最新网址|本章完).*?$"
+  },
+  "lastUpdateTime": "1789095600000"
+}
