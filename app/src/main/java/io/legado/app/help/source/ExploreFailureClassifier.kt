@@ -9,7 +9,7 @@ import javax.net.ssl.SSLException
 object ExploreFailureClassifier {
 
     fun fromThrowable(throwable: Throwable): String {
-        val causes = generateSequence<Throwable?>(throwable) { it.cause }.filterNotNull().toList()
+        val causes = generateSequence(throwable) { it.cause }.toList()
         val combined = causes.joinToString(" | ") { it.message.orEmpty() }
         val lower = combined.lowercase()
 
