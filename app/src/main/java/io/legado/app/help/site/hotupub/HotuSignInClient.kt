@@ -1,6 +1,7 @@
 package io.legado.app.help.site.hotupub
 
 import okhttp3.FormBody
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.util.concurrent.TimeUnit
@@ -9,14 +10,15 @@ import java.util.concurrent.TimeUnit
  * Signs one Hotu account without touching Sigma's global CookieStore.
  *
  * The account Cookie is supplied explicitly per request, so multiple accounts can be processed
- * sequentially without cross-account session leakage.
+ * sequentially without cross-account session leakage. Redirects are followed manually and only
+ * inside Hotu's HTTPS domain, preventing an account Cookie from being forwarded to a third party.
  */
 class HotuSignInClient(
     private val client: OkHttpClient = OkHttpClient.Builder()
         .connectTimeout(20, TimeUnit.SECONDS)
         .readTimeout(30, TimeUnit.SECONDS)
-        .followRedirects(true)
-        .followSslRedirects(true)
+        .followRedirects(false)
+        .followSslRedirects(false)
         .build()
 ) {
 
@@ -63,8 +65,8 @@ class HotuSignInClient(
             )
 
         val actionResponse = when (action.method) {
-            HotuSignMethod.GET -> get(action.url, cookie)
-            HotuSignMethod.POST -> post(action.url, cookie)
+            HotuSignMethod.GET -> get(action.url, cookie, action.params)
+            HotuSignMethod.POST -> post(action.url, cookie, action.params)
         }
         cookie = mergeSetCookies(cookie, actionResponse.setCookies)
 
@@ -82,19 +84,38 @@ class HotuSignInClient(
         }
     }
 
-    private fun get(url: String, cookie: String): Page {
-        val request = requestBuilder(url, cookie).get().build()
-        return execute(request)
+    private fun get(
+        url: String,
+        cookie: String,
+        params: Map<String, String> = emptyMap()
+    ): Page {
+        val target = if (params.isEmpty()) {
+            url
+        } else {
+            url.toHttpUrl().newBuilder().apply {
+                params.forEach { (key, value) -> addQueryParameter(key, value) }
+            }.build().toString()
+        }
+        val request = requestBuilder(target, cookie).get().build()
+        return execute(request, cookie)
     }
 
-    private fun post(url: String, cookie: String): Page {
+    private fun post(
+        url: String,
+        cookie: String,
+        params: Map<String, String>
+    ): Page {
+        val body = FormBody.Builder().apply {
+            params.forEach { (key, value) -> add(key, value) }
+        }.build()
         val request = requestBuilder(url, cookie)
-            .post(FormBody.Builder().build())
+            .post(body)
             .build()
-        return execute(request)
+        return execute(request, cookie)
     }
 
     private fun requestBuilder(url: String, cookie: String): Request.Builder {
+        require(HotuSignInParser.isOfficialUrl(url)) { "拒绝向非河图官方地址发送账号 Cookie" }
         return Request.Builder()
             .url(url)
             .header(
@@ -102,22 +123,48 @@ class HotuSignInClient(
                 "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0 Mobile Safari/537.36"
             )
             .header("Accept-Language", "zh-CN,zh;q=0.9")
-            .header("Referer", "https://m.hotupub.net/")
+            .header("Referer", HotuAccountPool.SIGN_URL)
             .header("Cookie", cookie)
     }
 
-    private fun execute(request: Request): Page {
-        client.newCall(request).execute().use { response ->
-            val body = response.body?.string().orEmpty()
-            if (!response.isSuccessful && response.code !in 300..399) {
-                error("HTTP ${response.code}")
+    private fun execute(initialRequest: Request, initialCookie: String): Page {
+        var request = initialRequest
+        var cookie = initialCookie
+        val collectedSetCookies = mutableListOf<String>()
+
+        repeat(MAX_REDIRECTS + 1) { redirectIndex ->
+            client.newCall(request).execute().use { response ->
+                val responseSetCookies = response.headers("Set-Cookie")
+                collectedSetCookies += responseSetCookies
+                cookie = mergeSetCookies(cookie, responseSetCookies)
+
+                if (response.code in REDIRECT_CODES) {
+                    if (redirectIndex >= MAX_REDIRECTS) error("河图重定向次数过多")
+                    val location = response.header("Location") ?: error("HTTP ${response.code} 缺少 Location")
+                    val nextUrl = response.request.url.resolve(location)?.toString()
+                        ?: error("无法解析河图重定向地址")
+                    require(HotuSignInParser.isOfficialUrl(nextUrl)) {
+                        "拒绝携带河图账号 Cookie 跟随站外重定向"
+                    }
+
+                    val builder = requestBuilder(nextUrl, cookie)
+                    request = when (response.code) {
+                        307, 308 -> builder.method(request.method, request.body).build()
+                        else -> builder.get().build()
+                    }
+                    return@use
+                }
+
+                val body = response.body?.string().orEmpty()
+                if (!response.isSuccessful) error("HTTP ${response.code}")
+                return Page(
+                    finalUrl = response.request.url.toString(),
+                    body = body,
+                    setCookies = collectedSetCookies.toList()
+                )
             }
-            return Page(
-                finalUrl = response.request.url.toString(),
-                body = body,
-                setCookies = response.headers("Set-Cookie")
-            )
         }
+        error("河图请求未完成")
     }
 
     private data class Page(
@@ -126,7 +173,7 @@ class HotuSignInClient(
         val setCookies: List<String>
     )
 
-    private fun mergeSetCookies(cookie: String, setCookies: List<String>): String {
+    internal fun mergeSetCookies(cookie: String, setCookies: List<String>): String {
         if (setCookies.isEmpty()) return cookie
         val map = linkedMapOf<String, String>()
         cookie.split(';').forEach { pair ->
@@ -143,5 +190,10 @@ class HotuSignInClient(
             }
         }
         return map.entries.joinToString("; ") { "${it.key}=${it.value}" }
+    }
+
+    private companion object {
+        const val MAX_REDIRECTS = 5
+        val REDIRECT_CODES = setOf(301, 302, 303, 307, 308)
     }
 }
