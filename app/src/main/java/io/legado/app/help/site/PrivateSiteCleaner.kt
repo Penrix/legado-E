@@ -83,10 +83,10 @@ object PrivateSiteCleaner {
     private val twkanChapterPureScript = """
         (() => {
           if (window.__penrixTwkanPureApplied) return;
-          window.__penrixTwkanPureApplied = true;
 
           const content = document.querySelector('#txtcontent0, #txtcontent, .txtnav');
           if (!content) return;
+          window.__penrixTwkanPureApplied = true;
 
           content.querySelectorAll('script, iframe, ins, .adsbygoogle').forEach(el => el.remove());
 
@@ -96,11 +96,21 @@ object PrivateSiteCleaner {
             /把本網(?:站)?分享到/i,
             /把本网站分享到/i,
             /台[灣湾]小說網.*twkan\.com/i,
-            /台[灣湾]小说网.*twkan\.com/i
+            /台[灣湾]小说网.*twkan\.com/i,
+            /^(?:www\.)?(?:twkan|69shux)\.com$/i
           ];
 
+          const normalizeText = text => {
+            const raw = String(text || '');
+            try {
+              return raw.normalize('NFKC');
+            } catch (_) {
+              return raw;
+            }
+          };
+
           const isPromo = text => {
-            const normalized = (text || '').replace(/\s+/g, ' ').trim();
+            const normalized = normalizeText(text).replace(/\s+/g, ' ').trim();
             if (!normalized || normalized.length > 180) return false;
             return promoPatterns.some(re => re.test(normalized));
           };
@@ -141,7 +151,6 @@ object PrivateSiteCleaner {
 
           const style = document.createElement('style');
           style.textContent = `
-            html, body { background: #fff !important; color: #222 !important; }
             body { margin: 0; padding: 0; }
             #penrix-twkan-pure { max-width: 46rem; margin: 0 auto; padding: 24px 18px 40px; }
             #penrix-twkan-pure h1 { font-size: 1.35rem; line-height: 1.5; margin: 0 0 24px; }
