@@ -1,5 +1,6 @@
 package io.legado.app.help.site.hotupub
 
+import android.webkit.CookieManager
 import io.legado.app.help.http.CookieStore
 import io.legado.app.help.site.PrivateSecretStore
 import io.legado.app.utils.GSON
@@ -182,18 +183,23 @@ object HotuAccountPool {
     private fun applyAccountCookie(accountId: String): Boolean {
         val cookie = cookie(accountId)?.trim().orEmpty()
         if (cookie.isBlank()) return false
-        // Reading currently uses www.hotupub.net while sign-in uses m.hotupub.net. One logical
-        // account must therefore own both official hosts or the App can accidentally read with B
-        // while signing with A.
-        setCookieForHost(SITE_URL, cookie)
-        setCookieForHost(WEB_SITE_URL, cookie)
-        return true
-    }
 
-    private fun setCookieForHost(url: String, cookie: String) {
-        CookieStore.removeCookie(url)
-        CookieStore.setCookie(url, cookie)
-        CookieStore.setWebCookie(url, cookie)
+        // CookieStore.setWebCookie() clears all WebView session cookies globally, which would log
+        // the user out of UAA/video sites. Clear only Hotu's own domain, then install this account
+        // on both official hosts.
+        CookieStore.removeCookie(WEB_SITE_URL)
+        CookieStore.setCookie(WEB_SITE_URL, cookie)
+
+        val manager = CookieManager.getInstance()
+        cookie.split(';')
+            .map { it.trim() }
+            .filter { it.contains('=') }
+            .forEach { pair ->
+                manager.setCookie(WEB_SITE_URL, pair)
+                manager.setCookie(SITE_URL, pair)
+            }
+        manager.flush()
+        return true
     }
 
     private fun currentBrowserCookie(): String {
