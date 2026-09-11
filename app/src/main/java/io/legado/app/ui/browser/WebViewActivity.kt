@@ -247,8 +247,8 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
         currentWebView.webChromeClient = CustomWebChromeClient()
         // 添加 JavaScript 接口
         currentWebView.addJavascriptInterface(JSInterface(this), nameBasic)
-        // 仅为明确支持的普通站点页面暴露最小净化桥；验证/等待回传页面完全绕过。
-        if (PrivateSiteCleaner.shouldApply(url, viewModel.sourceVerificationEnable)) {
+        // 只有 TWKAN 的普通用户页需要这个最小桥；验证页和其它站点不注入。
+        if (PrivateSiteCleaner.shouldInstallBridge(url, viewModel.sourceVerificationEnable)) {
             currentWebView.addJavascriptInterface(
                 PrivateSiteCleaner.Bridge(),
                 PrivateSiteCleaner.JS_BRIDGE_NAME
@@ -350,6 +350,7 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
     }
 
     override fun onDestroy() {
+        currentWebView.removeJavascriptInterface(PrivateSiteCleaner.JS_BRIDGE_NAME)
         WebViewPool.release(pooledWebView)
         super.onDestroy()
     }
