@@ -38,7 +38,7 @@
     "title": "h1@text",
     "content": "#txtcontent0@html||#txtcontent@html||.txtnav@html<js>Packages.java.text.Normalizer.normalize(String(result), Packages.java.text.Normalizer.Form.NFKC)</js>",
     "nextContentUrl": "",
-    "replaceRegex": "##.*[記记]住本站域名.*|.*GOOGLE\\s*搜索\\s*TWKAN.*|.*台[灣湾]小說網.*twkan\\.com.*|.*台[灣湾]小说网.*twkan\\.com.*|.*把本網(?:站)?分享到.*|.*把本网站分享到.*|(?im)^\\s*(?:www\\.)?(?:twkan|69shux)\\.com\\s*$|.*本章完.*"
+    "replaceRegex": "##.*[記记]住本站域名.*|.*GOOGLE\\s*搜索\\s*TWKAN.*|.*台[灣湾]小說網.*twkan\\.com.*|.*台[灣湾]小说网.*twkan\\.com.*|.*把本網(?:站)?分享到.*|.*把本网站分享到.*|(?im:^\\s*(?:www\\.)?(?:twkan|69shux)\\.com\\s*$)|.*本章完.*"
   },
   "lastUpdateTime": "1789095600000"
 }
