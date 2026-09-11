@@ -14,17 +14,9 @@ object PrivateSiteCleaner {
 
     const val JS_BRIDGE_NAME = "PenrixSite"
 
-    private val twkanHosts = setOf("twkan.com", "www.twkan.com")
+    fun isTwkan(url: String?): Boolean = PrivateSiteRegistry.twkan.matchesHost(hostOf(url))
 
-    private val twkanBlockedHostSuffixes = setOf(
-        "googletagmanager.com",
-        "google-analytics.com",
-        "doubleclick.net",
-        "connect.facebook.net",
-        "facebook.com"
-    )
-
-    fun isTwkan(url: String?): Boolean = hostOf(url) in twkanHosts
+    fun isManagedSite(url: String?): Boolean = PrivateSiteRegistry.profileFor(url) != null
 
     fun isTwkanChapter(url: String?): Boolean {
         if (!isTwkan(url)) return false
@@ -33,7 +25,7 @@ object PrivateSiteCleaner {
     }
 
     fun shouldApply(url: String?, sourceVerification: Boolean): Boolean {
-        return !sourceVerification && isTwkan(url)
+        return !sourceVerification && isManagedSite(url)
     }
 
     fun shouldBlockRequest(
@@ -42,16 +34,19 @@ object PrivateSiteCleaner {
         sourceVerification: Boolean
     ): Boolean {
         if (!shouldApply(pageUrl, sourceVerification)) return false
+        val profile = PrivateSiteRegistry.profileFor(pageUrl) ?: return false
         val requestHost = hostOf(requestUrl) ?: return false
-        return twkanBlockedHostSuffixes.any { suffix ->
+        return profile.blockedHostSuffixes.any { suffix ->
             requestHost == suffix || requestHost.endsWith(".$suffix")
         }
     }
 
     fun scriptFor(url: String?, sourceVerification: Boolean): String? {
         if (!shouldApply(url, sourceVerification)) return null
+        val profile = PrivateSiteRegistry.profileFor(url) ?: return null
         return when {
             isTwkanChapter(url) -> twkanChapterPureScript
+            profile.kind == PrivateSiteKind.VIDEO -> videoSiteCleanupScript
             else -> twkanGeneralCleanupScript
         }
     }
@@ -62,16 +57,76 @@ object PrivateSiteCleaner {
         fun t2s(content: String): String = ChineseUtils.t2s(content)
     }
 
-    private fun hostOf(url: String?): String? {
-        if (url.isNullOrBlank()) return null
-        return runCatching { URI(url).host?.lowercase() }.getOrNull()
-    }
+    private fun hostOf(url: String?): String? = PrivateSiteRegistry.hostOf(url)
 
     private val twkanGeneralCleanupScript = """
         (() => {
           document.querySelectorAll(
             'iframe[src*="facebook.com"], iframe[src*="googletagmanager.com"], .adsbygoogle, ins.adsbygoogle'
           ).forEach(el => el.remove());
+        })();
+    """.trimIndent()
+
+    /**
+     * Conservative video cleanup. Request-level blocking handles known third-party ad hosts;
+     * this removes their empty DOM shells and common Google ad containers without touching
+     * first-party video/player elements, login UI, age gates or regional restrictions.
+     */
+    private val videoSiteCleanupScript = """
+        (() => {
+          const blockedHostSuffixes = [
+            'googletagmanager.com',
+            'google-analytics.com',
+            'doubleclick.net',
+            'googlesyndication.com',
+            'trafficjunky.net',
+            'exoclick.com',
+            'exosrv.com',
+            'juicyads.com',
+            'popads.net',
+            'popcash.net'
+          ];
+
+          const blockedUrl = value => {
+            if (!value) return false;
+            try {
+              const host = new URL(value, location.href).hostname.toLowerCase();
+              return blockedHostSuffixes.some(suffix =>
+                host === suffix || host.endsWith('.' + suffix)
+              );
+            } catch (_) {
+              return false;
+            }
+          };
+
+          const clean = root => {
+            if (!root || !root.querySelectorAll) return;
+            root.querySelectorAll('iframe[src], script[src], img[src], a[href]').forEach(el => {
+              const value = el.getAttribute('src') || el.getAttribute('href');
+              if (blockedUrl(value)) el.remove();
+            });
+            root.querySelectorAll('ins.adsbygoogle, .adsbygoogle').forEach(el => el.remove());
+          };
+
+          clean(document);
+
+          if (!window.__penrixVideoCleanerObserver) {
+            const observer = new MutationObserver(records => {
+              records.forEach(record => {
+                record.addedNodes.forEach(node => {
+                  if (node.nodeType !== Node.ELEMENT_NODE) return;
+                  const value = node.getAttribute?.('src') || node.getAttribute?.('href');
+                  if (blockedUrl(value)) {
+                    node.remove();
+                    return;
+                  }
+                  clean(node);
+                });
+              });
+            });
+            observer.observe(document.documentElement, { childList: true, subtree: true });
+            window.__penrixVideoCleanerObserver = observer;
+          }
         })();
     """.trimIndent()
 
