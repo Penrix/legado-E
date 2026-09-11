@@ -7,34 +7,44 @@ import io.legado.app.utils.fromJsonObject
 import splitties.init.appCtx
 
 /**
- * Installs App-managed book sources without going through public/community source import.
+ * Installs App-managed sources directly into Sigma's normal BookSource database.
  *
- * This is intentionally separate from SourceHelp.insertBookSource(): Sigma's public import path
- * keeps all of its original behaviour, including its 18+ filtering. Private built-ins are assets
- * shipped by this App and use collision-resistant source keys so they do not overwrite a user's
- * community source for the same website.
+ * Two managed families are intentionally separated:
+ * - Penrix 内置: site adapters we maintain as part of the private App.
+ * - Penrix 社区精选: community rules we have reviewed, repaired and pinned.
+ *
+ * Public/manual imports still use SourceHelp.insertBookSource(). Managed assets use collision-
+ * resistant source keys so they never overwrite a user's own source for the same website.
  */
 object PrivateBookSourceInstaller {
 
-    const val MANAGED_GROUP = "Penrix 内置"
-    private const val MANAGED_KEY_MARKER = "penrix_builtin="
+    const val BUILTIN_GROUP = "Penrix 内置"
+    const val CURATED_GROUP = "Penrix 社区精选"
 
-    private val assetPaths = listOf(
-        "privateSites/bookSources/twkan-pure.json",
-        "privateSites/bookSources/69shuba-pure.json",
-        "privateSites/bookSources/bachashuku-pure.json",
-        "privateSites/bookSources/diyibanzhu-pure.json",
-        "privateSites/bookSources/uaa-pure.json"
+    private data class ManagedAsset(
+        val path: String,
+        val group: String,
+        val keyMarker: String
+    )
+
+    private val assets = listOf(
+        ManagedAsset("privateSites/bookSources/twkan-pure.json", BUILTIN_GROUP, "penrix_builtin="),
+        ManagedAsset("privateSites/bookSources/69shuba-pure.json", BUILTIN_GROUP, "penrix_builtin="),
+        ManagedAsset("privateSites/bookSources/bachashuku-pure.json", BUILTIN_GROUP, "penrix_builtin="),
+        ManagedAsset("privateSites/bookSources/diyibanzhu-pure.json", BUILTIN_GROUP, "penrix_builtin="),
+        ManagedAsset("privateSites/bookSources/uaa-pure.json", BUILTIN_GROUP, "penrix_builtin="),
+        ManagedAsset("privateSites/communityCurated/uukanshu-curated.json", CURATED_GROUP, "penrix_curated="),
+        ManagedAsset("privateSites/communityCurated/quanben-io-curated.json", CURATED_GROUP, "penrix_curated=")
     )
 
     fun installOrUpdate() {
-        assetPaths.forEach { assetPath ->
-            val source = load(assetPath) ?: return@forEach
-            if (!isManaged(source)) return@forEach
+        assets.forEach { asset ->
+            val source = load(asset.path) ?: return@forEach
+            if (!isManaged(source, asset)) return@forEach
 
             val existing = appDb.bookSourceDao.getBookSource(source.bookSourceUrl)
             if (existing != null) {
-                // Rule updates belong to the App; user-facing enable/order choices belong to user.
+                // App owns parser/network rules; the user owns enable/explore/order preferences.
                 source.enabled = existing.enabled
                 source.enabledExplore = existing.enabledExplore
                 source.customOrder = existing.customOrder
@@ -50,10 +60,10 @@ object PrivateBookSourceInstaller {
         }.getOrNull()
     }
 
-    private fun isManaged(source: BookSource): Boolean {
-        return source.bookSourceGroup
+    private fun isManaged(source: BookSource, asset: ManagedAsset): Boolean {
+        val hasExpectedGroup = source.bookSourceGroup
             ?.split(',')
-            ?.any { it.trim() == MANAGED_GROUP } == true &&
-                source.bookSourceUrl.contains(MANAGED_KEY_MARKER)
+            ?.any { it.trim() == asset.group } == true
+        return hasExpectedGroup && source.bookSourceUrl.contains(asset.keyMarker)
     }
 }
