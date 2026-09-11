@@ -1,0 +1,194 @@
+package io.legado.app.help.site.hotupub
+
+import io.legado.app.help.http.CookieStore
+import io.legado.app.help.site.PrivateSecretStore
+import io.legado.app.utils.GSON
+import io.legado.app.utils.fromJsonArray
+import splitties.init.appCtx
+import java.time.LocalDate
+import java.util.UUID
+
+/**
+ * Local account pool for HotuPub.
+ *
+ * Passwords are never stored. Every account contributes only its already-authenticated Cookie.
+ * Metadata is stored in private preferences; Cookie values live in [PrivateSecretStore].
+ */
+object HotuAccountPool {
+
+    const val SITE_URL = "https://m.hotupub.net/"
+    const val SIGN_URL = "https://m.hotupub.net/Activity/Sign"
+
+    private const val PREFS = "penrix_hotu_account_pool"
+    private const val META_KEY = "accounts"
+    private const val ACTIVE_KEY = "active_account_id"
+    private const val COOKIE_KEY_PREFIX = "hotu_cookie_"
+
+    enum class SignStatus {
+        NEVER,
+        SUCCESS,
+        ALREADY,
+        EXPIRED,
+        UNSUPPORTED,
+        FAILED
+    }
+
+    data class Account(
+        val id: String,
+        var label: String,
+        var enabled: Boolean = true,
+        var lastSignDate: String? = null,
+        var lastSignStatus: SignStatus = SignStatus.NEVER,
+        var lastSignMessage: String? = null
+    )
+
+    private val prefs by lazy {
+        appCtx.getSharedPreferences(PREFS, android.content.Context.MODE_PRIVATE)
+    }
+
+    @Synchronized
+    fun accounts(): List<Account> = loadAccounts().sortedBy { it.label }
+
+    @Synchronized
+    fun activeAccount(): Account? {
+        val activeId = prefs.getString(ACTIVE_KEY, null)
+        val all = loadAccounts()
+        return all.firstOrNull { it.id == activeId } ?: all.firstOrNull()
+    }
+
+    @Synchronized
+    fun captureCurrentLogin(label: String? = null): Account? {
+        val cookie = CookieStore.getCookie(SITE_URL).trim()
+        if (cookie.isBlank()) return null
+        return addAccount(
+            label = label?.takeIf { it.isNotBlank() } ?: nextDefaultLabel(),
+            cookie = cookie
+        )
+    }
+
+    @Synchronized
+    fun addAccount(label: String, cookie: String): Account {
+        require(cookie.isNotBlank()) { "Cookie must not be blank" }
+        val account = Account(
+            id = UUID.randomUUID().toString(),
+            label = label.ifBlank { nextDefaultLabel() }
+        )
+        val all = loadAccounts().toMutableList().apply { add(account) }
+        saveAccounts(all)
+        PrivateSecretStore.putString(cookieKey(account.id), cookie)
+        if (prefs.getString(ACTIVE_KEY, null).isNullOrBlank()) {
+            prefs.edit().putString(ACTIVE_KEY, account.id).apply()
+            applyAccountCookie(account.id)
+        }
+        return account
+    }
+
+    @Synchronized
+    fun rename(accountId: String, label: String): Boolean {
+        val all = loadAccounts().toMutableList()
+        val account = all.firstOrNull { it.id == accountId } ?: return false
+        account.label = label.ifBlank { account.label }
+        saveAccounts(all)
+        return true
+    }
+
+    @Synchronized
+    fun setEnabled(accountId: String, enabled: Boolean): Boolean {
+        val all = loadAccounts().toMutableList()
+        val account = all.firstOrNull { it.id == accountId } ?: return false
+        account.enabled = enabled
+        saveAccounts(all)
+        return true
+    }
+
+    @Synchronized
+    fun remove(accountId: String): Boolean {
+        val all = loadAccounts().toMutableList()
+        val removed = all.removeAll { it.id == accountId }
+        if (!removed) return false
+        saveAccounts(all)
+        PrivateSecretStore.remove(cookieKey(accountId))
+
+        val active = prefs.getString(ACTIVE_KEY, null)
+        if (active == accountId) {
+            val replacement = all.firstOrNull()?.id
+            prefs.edit().putString(ACTIVE_KEY, replacement).apply()
+            if (replacement != null) applyAccountCookie(replacement)
+        }
+        return true
+    }
+
+    @Synchronized
+    fun setActive(accountId: String): Boolean {
+        if (loadAccounts().none { it.id == accountId }) return false
+        prefs.edit().putString(ACTIVE_KEY, accountId).apply()
+        return applyAccountCookie(accountId)
+    }
+
+    @Synchronized
+    fun cookie(accountId: String): String? {
+        return PrivateSecretStore.getString(cookieKey(accountId))
+    }
+
+    @Synchronized
+    fun updateCookie(accountId: String, cookie: String) {
+        if (cookie.isBlank()) return
+        PrivateSecretStore.putString(cookieKey(accountId), cookie)
+        if (prefs.getString(ACTIVE_KEY, null) == accountId) {
+            applyAccountCookie(accountId)
+        }
+    }
+
+    @Synchronized
+    fun markSignResult(
+        accountId: String,
+        status: SignStatus,
+        message: String? = null,
+        date: LocalDate = LocalDate.now()
+    ) {
+        val all = loadAccounts().toMutableList()
+        val account = all.firstOrNull { it.id == accountId } ?: return
+        account.lastSignDate = date.toString()
+        account.lastSignStatus = status
+        account.lastSignMessage = message
+        saveAccounts(all)
+    }
+
+    fun isDue(account: Account, date: LocalDate = LocalDate.now()): Boolean {
+        return account.enabled && account.lastSignDate != date.toString()
+    }
+
+    @Synchronized
+    fun applyActiveCookie(): Boolean {
+        val account = activeAccount() ?: return false
+        return applyAccountCookie(account.id)
+    }
+
+    private fun applyAccountCookie(accountId: String): Boolean {
+        val cookie = cookie(accountId)?.trim().orEmpty()
+        if (cookie.isBlank()) return false
+        // Replace the Hotu domain's current session with the selected account only.
+        CookieStore.removeCookie(SITE_URL)
+        CookieStore.setCookie(SITE_URL, cookie)
+        CookieStore.setWebCookie(SITE_URL, cookie)
+        return true
+    }
+
+    private fun loadAccounts(): List<Account> {
+        val raw = prefs.getString(META_KEY, null) ?: return emptyList()
+        return GSON.fromJsonArray<Account>(raw).getOrNull() ?: emptyList()
+    }
+
+    private fun saveAccounts(accounts: List<Account>) {
+        prefs.edit().putString(META_KEY, GSON.toJson(accounts)).apply()
+    }
+
+    private fun nextDefaultLabel(): String {
+        val used = loadAccounts().map { it.label }.toSet()
+        var index = 1
+        while ("河图账号 $index" in used) index++
+        return "河图账号 $index"
+    }
+
+    private fun cookieKey(accountId: String) = COOKIE_KEY_PREFIX + accountId
+}
