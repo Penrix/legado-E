@@ -1,0 +1,44 @@
+{
+  "bookSourceComment": "Penrix 私人版内置 69书吧。直连 69shuba.com；搜索遇 Cloudflare 时使用 Sigma 自带浏览器验证，验证 Cookie 由 CookieJar 复用。规则只保留搜索、详情、目录、正文和正文净化，不改书源运行时。",
+  "bookSourceGroup": "Penrix 内置",
+  "bookSourceName": "69书吧 Pure",
+  "bookSourceType": 0,
+  "bookSourceUrl": "https://www.69shuba.com/?penrix_builtin=69shuba",
+  "bookUrlPattern": "https?:\\/\\/www\\.69shuba\\.com\\/book\\/\\d+(?:\\.htm|\\/?)",
+  "customOrder": -8990,
+  "enabled": true,
+  "enabledCookieJar": true,
+  "enabledExplore": false,
+  "header": "<js>(function(){var ua='';try{ua=String(java.getWebViewUA()||'');}catch(e){}if(ua.indexOf('Mozilla')!==0)ua='Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0 Mobile Safari/537.36';return JSON.stringify({'User-Agent':ua,'Referer':'https://www.69shuba.com/','Accept-Language':'zh-CN,zh;q=0.9'});})()</js>",
+  "searchUrl": "/modules/article/search.php,{\"method\":\"POST\",\"body\":\"searchkey={{java.put('penrix69key',key)}}&searchtype=all&page={{page}}\",\"charset\":\"gbk\"}",
+  "ruleSearch": {
+    "bookList": "<js>\n(function(){\n  var rule='class.newbox@tag.li';\n  var parse=function(html){\n    if(!html)return null;\n    java.setContent(String(html));\n    var list=java.getElements(rule);\n    return list!=null&&list.size()>0?list:null;\n  };\n  var html=String(result||'');\n  var list=parse(html);\n  if(list)return list;\n  var challenge=/_cf_chl_opt|challenge-form|Just a moment|Checking your browser|verify\\.php/i.test(html);\n  if(!challenge)return null;\n  var key=String(java.get('penrix69key')||'');\n  var url='https://www.69shuba.com/modules/article/search.php?searchkey='+java.encodeURI(key,'gbk')+'&searchtype=all&page=1';\n  var response=java.startBrowserAwait(url,'69书吧 · 人机验证',false);\n  return parse(response?String(response.body()||''):'');\n})()\n</js>",
+    "name": "tag.h3@tag.a@text",
+    "author": "class.labelbox@tag.label.0@text",
+    "bookUrl": "tag.h3@tag.a@href",
+    "coverUrl": "tag.img@data-src||tag.img@src",
+    "intro": "class.ellipsis_2@text",
+    "kind": "class.labelbox@tag.label!0@text",
+    "lastChapter": "class.zxzj@tag.p@ownText"
+  },
+  "ruleBookInfo": {
+    "name": "[property$=book_name]@content",
+    "author": "[property$=author]@content",
+    "intro": "class.navtxt@tag.p.0@textNodes",
+    "kind": "[property~=category|status]@content",
+    "coverUrl": "[property$=image]@content",
+    "lastChapter": "[property$=latest_chapter_name]@content",
+    "wordCount": "class.booknav2@tag.p.2@text##\\s*\\|.*$##",
+    "tocUrl": "class.more-btn@href||class.addbtn@tag.a.0@href"
+  },
+  "ruleToc": {
+    "chapterList": "-id.catalog@tag.li",
+    "chapterName": "tag.a@text",
+    "chapterUrl": "tag.a@href"
+  },
+  "ruleContent": {
+    "content": "class.txtnav@textNodes",
+    "replaceRegex": "##\\s*[（(]?本章完[）)]?\\s*$|新.{0,2}书吧|吧书.{0,2}新|请记住本书首发域名.*|www\\.69shuba\\.com|loadAdv\\([\\d, ]*\\);?"
+  },
+  "lastUpdateTime": "1789095600000"
+}
