@@ -24,6 +24,7 @@ import androidx.activity.viewModels
 import androidx.core.graphics.createBitmap
 import androidx.core.net.toUri
 import androidx.core.view.size
+import androidx.webkit.ScriptHandler
 import io.legado.app.R
 import io.legado.app.base.VMBaseActivity
 import io.legado.app.constant.AppConst
@@ -34,6 +35,7 @@ import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.WebCacheManager
 import io.legado.app.help.http.CookieManager as AppCookieManager
 import io.legado.app.help.http.CookieStore
+import io.legado.app.help.site.PrivateAdBlock
 import io.legado.app.help.site.PrivateSiteCleaner
 import io.legado.app.help.source.SourceVerificationHelp
 import io.legado.app.help.webView.PooledWebView
@@ -79,6 +81,7 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
     override val binding by viewBinding(ActivityWebViewBinding::inflate)
     override val viewModel by viewModels<WebViewModel>()
     private var customWebViewCallback: WebChromeClient.CustomViewCallback? = null
+    private var adBlockScriptHandler: ScriptHandler? = null
     private var webPic: String? = null
     private var isCloudflareChallenge = false
     private var isFullScreen = false
@@ -244,6 +247,24 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
         binding.progressBar.fontColor = accentColor
         currentWebView.webChromeClient = CustomWebChromeClient()
         currentWebView.addJavascriptInterface(JSInterface(this), nameBasic)
+
+        PrivateAdBlock.ensureInitialized(applicationContext)
+        if (PrivateSiteCleaner.shouldApply(url, viewModel.sourceVerificationEnable) && PrivateAdBlock.isReady()) {
+            PrivateAdBlock.setActivePage(url)
+            currentWebView.addJavascriptInterface(
+                PrivateAdBlock.Bridge(),
+                PrivateAdBlock.JS_BRIDGE_NAME
+            )
+            adBlockScriptHandler?.remove()
+            adBlockScriptHandler = PrivateAdBlock.installDocumentStartScript(
+                currentWebView,
+                url,
+                viewModel.sourceVerificationEnable
+            )
+        } else {
+            PrivateAdBlock.clearActivePage(url)
+        }
+
         if (PrivateSiteCleaner.shouldInstallBridge(url, viewModel.sourceVerificationEnable)) {
             currentWebView.addJavascriptInterface(
                 PrivateSiteCleaner.Bridge(),
@@ -346,6 +367,10 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
     }
 
     override fun onDestroy() {
+        adBlockScriptHandler?.remove()
+        adBlockScriptHandler = null
+        PrivateAdBlock.clearActivePage(currentPageUrl)
+        currentWebView.removeJavascriptInterface(PrivateAdBlock.JS_BRIDGE_NAME)
         currentWebView.removeJavascriptInterface(PrivateSiteCleaner.JS_BRIDGE_NAME)
         WebViewPool.release(pooledWebView)
         super.onDestroy()
@@ -451,8 +476,10 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
 
         override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
             val previousUrl = currentPageUrl.ifBlank { viewModel.baseUrl }
+            val nativeBlocked = !viewModel.sourceVerificationEnable &&
+                PrivateAdBlock.shouldBlockNavigation(previousUrl, url)
             if (
-                PrivateSiteCleaner.shouldBlockNavigation(
+                nativeBlocked || PrivateSiteCleaner.shouldBlockNavigation(
                     previousUrl,
                     url,
                     viewModel.sourceVerificationEnable
@@ -463,6 +490,11 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
                 return
             }
             currentPageUrl = url.orEmpty()
+            if (!viewModel.sourceVerificationEnable) {
+                PrivateAdBlock.setActivePage(url)
+            } else {
+                PrivateAdBlock.clearActivePage(url)
+            }
             if (needClearHistory) {
                 needClearHistory = false
                 currentWebView.clearHistory()
@@ -495,6 +527,9 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
                 }
             }
 
+            // Full adblock-rust cosmetics/scriptlets started before site JS. Keep the old cleaner
+            // only as a narrow site-specific correction layer for known leftovers and TWKAN's
+            // presentation-specific chapter cleanup.
             PrivateSiteCleaner.scriptFor(url, viewModel.sourceVerificationEnable)?.let { script ->
                 view?.evaluateJavascript(script, null)
             }
@@ -505,6 +540,9 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
             request: WebResourceRequest
         ): WebResourceResponse? {
             val pageUrl = currentPageUrl.ifBlank { viewModel.baseUrl }
+            if (!viewModel.sourceVerificationEnable) {
+                PrivateAdBlock.intercept(pageUrl, request)?.let { return it }
+            }
             if (
                 PrivateSiteCleaner.shouldBlockRequest(
                     pageUrl,
@@ -523,10 +561,20 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
 
         private fun shouldOverrideUrlLoading(url: Uri): Boolean {
             val pageUrl = currentPageUrl.ifBlank { viewModel.baseUrl }
+            val urlString = url.toString()
+            if (!viewModel.sourceVerificationEnable) {
+                if (PrivateAdBlock.shouldBlockNavigation(pageUrl, urlString)) {
+                    return true
+                }
+                PrivateAdBlock.rewrittenNavigation(pageUrl, urlString)?.let { rewritten ->
+                    currentWebView.loadUrl(rewritten)
+                    return true
+                }
+            }
             if (
                 PrivateSiteCleaner.shouldBlockNavigation(
                     pageUrl,
-                    url.toString(),
+                    urlString,
                     viewModel.sourceVerificationEnable
                 )
             ) {
