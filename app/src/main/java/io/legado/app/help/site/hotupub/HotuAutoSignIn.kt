@@ -7,7 +7,6 @@ import android.content.Intent
 import android.os.Handler
 import android.os.Looper
 import splitties.init.appCtx
-import java.time.LocalDate
 import java.util.Calendar
 import java.util.concurrent.Executors
 
@@ -63,7 +62,7 @@ object HotuAutoSignIn {
     }
 
     fun runDue(force: Boolean = false): List<AccountResult> {
-        val today = LocalDate.now()
+        val today = HotuAccountPool.siteToday()
         return HotuAccountPool.accounts()
             .filter { force || HotuAccountPool.isDue(it, today) }
             .map { signOne(it) }
