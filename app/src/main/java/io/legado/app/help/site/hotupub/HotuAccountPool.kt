@@ -84,12 +84,20 @@ object HotuAccountPool {
             id = UUID.randomUUID().toString(),
             label = label.ifBlank { nextDefaultLabel() }
         )
+
+        // Persist the secret first. If AndroidKeyStore fails, do not leave a metadata-only ghost
+        // account that can never be selected or signed in.
+        PrivateSecretStore.putString(cookieKey(account.id), cookie)
         val all = loadAccounts().toMutableList().apply { add(account) }
         saveAccounts(all)
-        PrivateSecretStore.putString(cookieKey(account.id), cookie)
+
         if (prefs.getString(ACTIVE_KEY, null).isNullOrBlank()) {
-            prefs.edit().putString(ACTIVE_KEY, account.id).apply()
-            applyAccountCookie(account.id)
+            if (!setActive(account.id)) {
+                all.removeAll { it.id == account.id }
+                saveAccounts(all)
+                PrivateSecretStore.remove(cookieKey(account.id))
+                error("Unable to activate stored Hotu account")
+            }
         }
         return account
     }
@@ -122,9 +130,11 @@ object HotuAccountPool {
 
         val active = prefs.getString(ACTIVE_KEY, null)
         if (active == accountId) {
-            val replacement = all.firstOrNull()?.id
-            prefs.edit().putString(ACTIVE_KEY, replacement).apply()
-            if (replacement != null) applyAccountCookie(replacement)
+            val replacement = all.firstOrNull { !cookie(it.id).isNullOrBlank() }
+            if (replacement == null || !setActive(replacement.id)) {
+                prefs.edit().remove(ACTIVE_KEY).apply()
+                clearHotuSession()
+            }
         }
         return true
     }
@@ -132,8 +142,11 @@ object HotuAccountPool {
     @Synchronized
     fun setActive(accountId: String): Boolean {
         if (loadAccounts().none { it.id == accountId }) return false
+        // Apply first, then publish the pointer. A corrupted/missing secret must not make the App
+        // claim that an unusable account is active.
+        if (!applyAccountCookie(accountId)) return false
         prefs.edit().putString(ACTIVE_KEY, accountId).apply()
-        return applyAccountCookie(accountId)
+        return true
     }
 
     @Synchronized
@@ -177,7 +190,9 @@ object HotuAccountPool {
     @Synchronized
     fun applyActiveCookie(): Boolean {
         val account = activeAccount() ?: return false
-        return applyAccountCookie(account.id)
+        if (!applyAccountCookie(account.id)) return false
+        prefs.edit().putString(ACTIVE_KEY, account.id).apply()
+        return true
     }
 
     private fun applyAccountCookie(accountId: String): Boolean {
@@ -200,6 +215,14 @@ object HotuAccountPool {
             }
         manager.flush()
         return true
+    }
+
+    private fun clearHotuSession() {
+        // CookieStore.removeCookie uses a host/domain-scoped WebView cleanup; it does not call the
+        // global removeSessionCookies(null) used by setWebCookie().
+        CookieStore.removeCookie(WEB_SITE_URL)
+        CookieStore.removeCookie(SITE_URL)
+        CookieManager.getInstance().flush()
     }
 
     private fun currentBrowserCookie(): String {
