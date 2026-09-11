@@ -6,6 +6,7 @@ import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonArray
 import splitties.init.appCtx
 import java.time.LocalDate
+import java.time.ZoneId
 import java.util.UUID
 
 /**
@@ -17,12 +18,14 @@ import java.util.UUID
 object HotuAccountPool {
 
     const val SITE_URL = "https://m.hotupub.net/"
+    const val WEB_SITE_URL = "https://www.hotupub.net/"
     const val SIGN_URL = "https://m.hotupub.net/Activity/Sign"
 
     private const val PREFS = "penrix_hotu_account_pool"
     private const val META_KEY = "accounts"
     private const val ACTIVE_KEY = "active_account_id"
     private const val COOKIE_KEY_PREFIX = "hotu_cookie_"
+    private val SITE_ZONE = ZoneId.of("Asia/Taipei")
 
     enum class SignStatus {
         NEVER,
@@ -59,7 +62,7 @@ object HotuAccountPool {
 
     @Synchronized
     fun captureCurrentLogin(label: String? = null): Account? {
-        val cookie = CookieStore.getCookie(SITE_URL).trim()
+        val cookie = currentBrowserCookie()
         if (cookie.isBlank()) return null
         loadAccounts().firstOrNull { existing -> cookie(existing.id) == cookie }?.let {
             return it
@@ -148,7 +151,7 @@ object HotuAccountPool {
         accountId: String,
         status: SignStatus,
         message: String? = null,
-        date: LocalDate = LocalDate.now()
+        date: LocalDate = siteToday()
     ) {
         val all = loadAccounts().toMutableList()
         val account = all.firstOrNull { it.id == accountId } ?: return
@@ -161,7 +164,9 @@ object HotuAccountPool {
         saveAccounts(all)
     }
 
-    fun isDue(account: Account, date: LocalDate = LocalDate.now()): Boolean {
+    fun siteToday(): LocalDate = LocalDate.now(SITE_ZONE)
+
+    fun isDue(account: Account, date: LocalDate = siteToday()): Boolean {
         return account.enabled && account.lastAttemptDate != date.toString()
     }
 
@@ -174,11 +179,42 @@ object HotuAccountPool {
     private fun applyAccountCookie(accountId: String): Boolean {
         val cookie = cookie(accountId)?.trim().orEmpty()
         if (cookie.isBlank()) return false
-        // Replace the Hotu domain's current session with the selected account only.
-        CookieStore.removeCookie(SITE_URL)
-        CookieStore.setCookie(SITE_URL, cookie)
-        CookieStore.setWebCookie(SITE_URL, cookie)
+        // Reading currently uses www.hotupub.net while sign-in uses m.hotupub.net. One logical
+        // account must therefore own both official hosts or the App can accidentally read with B
+        // while signing with A.
+        setCookieForHost(SITE_URL, cookie)
+        setCookieForHost(WEB_SITE_URL, cookie)
         return true
+    }
+
+    private fun setCookieForHost(url: String, cookie: String) {
+        CookieStore.removeCookie(url)
+        CookieStore.setCookie(url, cookie)
+        CookieStore.setWebCookie(url, cookie)
+    }
+
+    private fun currentBrowserCookie(): String {
+        val mobile = CookieStore.getCookie(SITE_URL).trim()
+        val web = CookieStore.getCookie(WEB_SITE_URL).trim()
+        return when {
+            mobile.isBlank() -> web
+            web.isBlank() -> mobile
+            mobile == web -> mobile
+            else -> mergeCookies(web, mobile)
+        }
+    }
+
+    private fun mergeCookies(vararg values: String): String {
+        val map = linkedMapOf<String, String>()
+        values.forEach { cookie ->
+            cookie.split(';').forEach { pair ->
+                val index = pair.indexOf('=')
+                if (index > 0) {
+                    map[pair.substring(0, index).trim()] = pair.substring(index + 1).trim()
+                }
+            }
+        }
+        return map.entries.joinToString("; ") { "${it.key}=${it.value}" }
     }
 
     private fun loadAccounts(): List<Account> {
