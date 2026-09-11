@@ -77,10 +77,10 @@ object DefaultData {
 
     val themeConfigs: List<ThemeConfig.Config> by lazy {
         val json = String(
-            appCtx.assets.open("defaultData${File.separator}${ReadBookConfig.configFileName}")
+            appCtx.assets.open("defaultData${File.separator}${ThemeConfig.configFileName}")
                 .readBytes()
         )
-        GSON.fromJsonArray<ReadBookConfig.Config>(json).getOrNull()
+        GSON.fromJsonArray<ThemeConfig.Config>(json).getOrNull()
             ?: emptyList()
     }
 
