@@ -21,7 +21,8 @@ data class PrivateSiteProfile(
     val requiresLogin: Boolean = false,
     val usesCredits: Boolean = false,
     val regionSensitive: Boolean = false,
-    val blockedHostSuffixes: Set<String> = emptySet()
+    val blockedHostSuffixes: Set<String> = emptySet(),
+    val domRemoveSelectors: Set<String> = emptySet()
 ) {
     fun matchesHost(host: String?): Boolean {
         val normalized = host?.lowercase() ?: return false
@@ -31,16 +32,7 @@ data class PrivateSiteProfile(
     }
 }
 
-/**
- * Stable identities for the user's built-in private sites.
- *
- * Site identity is deliberately separate from hostname. A long-lived site may use multiple
- * regional/language domains, and rotating-domain sites can learn verified entry URLs without
- * changing their stable [PrivateSiteProfile.id].
- *
- * This registry is presentation/browser infrastructure only. It must not be used to route or
- * rewrite Legado source-runtime requests (AnalyzeRule/Rhino/java.ajax/BackstageWebView).
- */
+/** Stable identities and presentation-only cleanup rules for selected private sites. */
 object PrivateSiteRegistry {
 
     private val commonTrackerHosts = setOf(
@@ -52,11 +44,32 @@ object PrivateSiteRegistry {
 
     private val commonAdultAdHosts = setOf(
         "trafficjunky.net",
+        "trafficfactory.biz",
+        "trafficfactory.com",
         "exoclick.com",
         "exosrv.com",
         "juicyads.com",
+        "plugrush.com",
+        "ero-advertising.com",
+        "hilltopads.net",
+        "propellerads.com",
+        "onclicka.com",
+        "adsterra.com",
+        "monetag.com",
+        "tsyndicate.com",
+        "craktraffic.com",
+        "adnium.com",
         "popads.net",
         "popcash.net"
+    )
+
+    private val commonAdSelectors = setOf(
+        "ins.adsbygoogle",
+        ".adsbygoogle",
+        "[data-ad-client]",
+        "[data-ad-slot]",
+        "[id^='google_ads_']",
+        "iframe[name^='google_ads']"
     )
 
     val twkan = PrivateSiteProfile(
@@ -69,7 +82,8 @@ object PrivateSiteRegistry {
         blockedHostSuffixes = commonTrackerHosts + setOf(
             "connect.facebook.net",
             "facebook.com"
-        )
+        ),
+        domRemoveSelectors = commonAdSelectors
     )
 
     val shuba69 = PrivateSiteProfile(
@@ -79,17 +93,20 @@ object PrivateSiteRegistry {
         kind = PrivateSiteKind.NOVEL,
         rootDomains = setOf("69shuba.com"),
         fingerprintTerms = setOf("69书吧"),
-        blockedHostSuffixes = commonTrackerHosts
+        blockedHostSuffixes = commonTrackerHosts,
+        domRemoveSelectors = commonAdSelectors
     )
 
     val uukan = PrivateSiteProfile(
         id = "uukan",
         displayName = "UU看书",
-        startUrl = "https://www.uukan.org/",
+        startUrl = "https://uukanshu.cc/",
         kind = PrivateSiteKind.NOVEL,
-        rootDomains = setOf("uukan.org"),
+        rootDomains = setOf("uukanshu.cc", "uukan.org"),
+        entryUrls = setOf("https://uukanshu.cc/", "https://www.uukan.org/"),
         fingerprintTerms = setOf("UU看书"),
-        blockedHostSuffixes = commonTrackerHosts
+        blockedHostSuffixes = commonTrackerHosts,
+        domRemoveSelectors = commonAdSelectors
     )
 
     val quanben = PrivateSiteProfile(
@@ -99,7 +116,8 @@ object PrivateSiteRegistry {
         kind = PrivateSiteKind.NOVEL,
         rootDomains = setOf("quanben.io"),
         fingerprintTerms = setOf("全本"),
-        blockedHostSuffixes = commonTrackerHosts
+        blockedHostSuffixes = commonTrackerHosts,
+        domRemoveSelectors = commonAdSelectors
     )
 
     val diyibanzhu = PrivateSiteProfile(
@@ -119,19 +137,26 @@ object PrivateSiteRegistry {
         ),
         fingerprintTerms = setOf("第一版主"),
         adult = true,
-        blockedHostSuffixes = commonTrackerHosts + commonAdultAdHosts
+        blockedHostSuffixes = commonTrackerHosts + commonAdultAdHosts,
+        domRemoveSelectors = commonAdSelectors
     )
 
     val bachashuku = PrivateSiteProfile(
         id = "bachashuku",
         displayName = "八叉书库",
-        startUrl = "https://8xsk.com/",
+        startUrl = "https://www.bachashuku.org/",
         kind = PrivateSiteKind.NOVEL,
-        rootDomains = setOf("8xsk.com", "bachashuku.org"),
-        entryUrls = setOf("https://8xsk.com/", "https://bachashuku.org/"),
+        rootDomains = setOf("8xsk.com", "8xsk.org", "bachashuku.org"),
+        entryUrls = setOf(
+            "https://www.bachashuku.org/",
+            "https://8xsk.com/",
+            "https://8xsk.org/"
+        ),
         fingerprintTerms = setOf("八叉书库", "八叉"),
         adult = true,
-        blockedHostSuffixes = commonTrackerHosts + commonAdultAdHosts
+        requiresLogin = true,
+        blockedHostSuffixes = commonTrackerHosts + commonAdultAdHosts,
+        domRemoveSelectors = commonAdSelectors
     )
 
     val uaa = PrivateSiteProfile(
@@ -143,7 +168,8 @@ object PrivateSiteRegistry {
         fingerprintTerms = setOf("UAA"),
         adult = true,
         requiresLogin = true,
-        blockedHostSuffixes = commonTrackerHosts + commonAdultAdHosts
+        blockedHostSuffixes = commonTrackerHosts + commonAdultAdHosts,
+        domRemoveSelectors = commonAdSelectors
     )
 
     val hotupub = PrivateSiteProfile(
@@ -156,7 +182,8 @@ object PrivateSiteRegistry {
         adult = true,
         requiresLogin = true,
         usesCredits = true,
-        blockedHostSuffixes = commonTrackerHosts + commonAdultAdHosts
+        blockedHostSuffixes = commonTrackerHosts + commonAdultAdHosts,
+        domRemoveSelectors = commonAdSelectors
     )
 
     val cool18 = PrivateSiteProfile(
@@ -167,7 +194,8 @@ object PrivateSiteRegistry {
         rootDomains = setOf("cool18.com"),
         fingerprintTerms = setOf("Cool18", "禁忌书屋"),
         adult = true,
-        blockedHostSuffixes = commonTrackerHosts + commonAdultAdHosts
+        blockedHostSuffixes = commonTrackerHosts + commonAdultAdHosts,
+        domRemoveSelectors = commonAdSelectors
     )
 
     val hanime1 = PrivateSiteProfile(
@@ -178,7 +206,12 @@ object PrivateSiteRegistry {
         rootDomains = setOf("hanime1.me"),
         fingerprintTerms = setOf("Hanime1"),
         adult = true,
-        blockedHostSuffixes = commonTrackerHosts + commonAdultAdHosts
+        blockedHostSuffixes = commonTrackerHosts + commonAdultAdHosts + setOf(
+            "erodalabs.com"
+        ),
+        domRemoveSelectors = commonAdSelectors + setOf(
+            "a[href*='erodalabs.com']"
+        )
     )
 
     val pornhub = PrivateSiteProfile(
@@ -190,7 +223,8 @@ object PrivateSiteRegistry {
         fingerprintTerms = setOf("Pornhub"),
         adult = true,
         regionSensitive = true,
-        blockedHostSuffixes = commonTrackerHosts + commonAdultAdHosts
+        blockedHostSuffixes = commonTrackerHosts + commonAdultAdHosts,
+        domRemoveSelectors = commonAdSelectors
     )
 
     val xvideos = PrivateSiteProfile(
@@ -202,7 +236,8 @@ object PrivateSiteRegistry {
         fingerprintTerms = setOf("XVideos"),
         adult = true,
         regionSensitive = true,
-        blockedHostSuffixes = commonTrackerHosts + commonAdultAdHosts
+        blockedHostSuffixes = commonTrackerHosts + commonAdultAdHosts,
+        domRemoveSelectors = commonAdSelectors
     )
 
     val missav = PrivateSiteProfile(
@@ -214,7 +249,16 @@ object PrivateSiteRegistry {
         fingerprintTerms = setOf("MissAV"),
         adult = true,
         regionSensitive = true,
-        blockedHostSuffixes = commonTrackerHosts + commonAdultAdHosts
+        blockedHostSuffixes = commonTrackerHosts + commonAdultAdHosts + setOf(
+            "mayzaent.com",
+            "bit.ly",
+            "myavlive.com"
+        ),
+        domRemoveSelectors = commonAdSelectors + setOf(
+            "iframe[src*='mayzaent.com']",
+            "a[href*='bit.ly']",
+            "a[href*='myavlive.com']"
+        )
     )
 
     val thePornDude = PrivateSiteProfile(
@@ -225,7 +269,8 @@ object PrivateSiteRegistry {
         rootDomains = setOf("theporndude.com"),
         fingerprintTerms = setOf("Porn Dude", "ThePornDude"),
         adult = true,
-        blockedHostSuffixes = commonTrackerHosts + commonAdultAdHosts
+        blockedHostSuffixes = commonTrackerHosts + commonAdultAdHosts,
+        domRemoveSelectors = commonAdSelectors
     )
 
     val profiles: List<PrivateSiteProfile> = listOf(
