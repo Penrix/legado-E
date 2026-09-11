@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
+import android.widget.Toast
 import androidx.preference.Preference
 import io.legado.app.R
 import io.legado.app.base.BaseFragment
@@ -14,6 +15,8 @@ import io.legado.app.databinding.FragmentMyConfigBinding
 import io.legado.app.help.config.ThemeConfig
 import io.legado.app.help.site.PrivateSiteKind
 import io.legado.app.help.site.PrivateSiteRegistry
+import io.legado.app.help.site.hotupub.HotuAccountPool
+import io.legado.app.help.site.hotupub.HotuAutoSignIn
 import io.legado.app.lib.dialogs.selector
 import io.legado.app.lib.prefs.NameListPreference
 import io.legado.app.lib.prefs.SwitchPreference
@@ -149,6 +152,7 @@ class MyFragment() : BaseFragment(R.layout.fragment_my_config), MainFragmentInte
             when (preference.key) {
                 "bookSourceManage" -> startActivity<BookSourceActivity>()
                 "privateSites" -> openPrivateSites()
+                "hotuAccountPool" -> openHotuAccountPool()
                 "replaceManage" -> startActivity<ReplaceRuleActivity>()
                 "dictRuleManage" -> startActivity<DictRuleActivity>()
                 "txtTocRuleManage" -> startActivity<TxtTocRuleActivity>()
@@ -191,6 +195,99 @@ class MyFragment() : BaseFragment(R.layout.fragment_my_config), MainFragmentInte
                     putExtra("title", site.displayName)
                     putExtra("sourceName", "Penrix 私人站点")
                 }
+            }
+        }
+
+        private fun openHotuAccountPool() {
+            val accounts = HotuAccountPool.accounts()
+            val activeId = HotuAccountPool.activeAccount()?.id
+            val labels = arrayListOf(
+                "保存当前河图登录为新账号",
+                "立即签到全部账号"
+            )
+            accounts.forEach { account ->
+                val active = if (account.id == activeId) "✓ " else ""
+                val status = when (account.lastSignStatus) {
+                    HotuAccountPool.SignStatus.NEVER -> "未签到"
+                    HotuAccountPool.SignStatus.SUCCESS -> "已签到"
+                    HotuAccountPool.SignStatus.ALREADY -> "今日已签"
+                    HotuAccountPool.SignStatus.EXPIRED -> "登录失效"
+                    HotuAccountPool.SignStatus.UNSUPPORTED -> "规则待更新"
+                    HotuAccountPool.SignStatus.FAILED -> "签到失败"
+                }
+                labels += "$active${account.label} · $status"
+            }
+
+            context?.selector(labels) { _, index ->
+                when (index) {
+                    0 -> {
+                        val saved = HotuAccountPool.captureCurrentLogin()
+                        if (saved == null) {
+                            toast("当前没有可保存的河图登录态，请先在私人站点里登录河图")
+                        } else {
+                            toast("已保存 ${saved.label}")
+                        }
+                    }
+
+                    1 -> {
+                        toast("开始签到 ${accounts.size} 个河图账号")
+                        HotuAutoSignIn.runDueAsync(force = true) { results ->
+                            val success = results.count {
+                                it.result.status == HotuAccountPool.SignStatus.SUCCESS ||
+                                    it.result.status == HotuAccountPool.SignStatus.ALREADY
+                            }
+                            toast("河图签到完成：$success/${results.size}")
+                        }
+                    }
+
+                    else -> manageHotuAccount(accounts[index - 2])
+                }
+            }
+        }
+
+        private fun manageHotuAccount(account: HotuAccountPool.Account) {
+            val actions = arrayListOf(
+                "设为当前阅读账号",
+                "立即签到这个账号",
+                if (account.enabled) "暂停自动签到" else "恢复自动签到",
+                "删除账号"
+            )
+            context?.selector(actions) { _, index ->
+                when (index) {
+                    0 -> {
+                        if (HotuAccountPool.setActive(account.id)) {
+                            toast("当前河图账号：${account.label}")
+                        } else {
+                            toast("切换失败：账号 Cookie 不可用")
+                        }
+                    }
+
+                    1 -> {
+                        toast("正在签到 ${account.label}")
+                        HotuAutoSignIn.runAccountAsync(account.id) { result ->
+                            toast(
+                                result?.let { "${account.label}：${it.result.message}" }
+                                    ?: "账号不存在"
+                            )
+                        }
+                    }
+
+                    2 -> {
+                        HotuAccountPool.setEnabled(account.id, !account.enabled)
+                        toast(if (account.enabled) "已暂停自动签到" else "已恢复自动签到")
+                    }
+
+                    3 -> {
+                        HotuAccountPool.remove(account.id)
+                        toast("已删除 ${account.label}")
+                    }
+                }
+            }
+        }
+
+        private fun toast(message: String) {
+            context?.let {
+                Toast.makeText(it, message, Toast.LENGTH_SHORT).show()
             }
         }
 
