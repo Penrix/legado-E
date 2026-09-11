@@ -16,7 +16,7 @@ concurrency:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -31,6 +31,34 @@ jobs:
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v5
+
+      - name: Set up Android NDK
+        id: setup_ndk
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r27c
+          add-to-path: false
+
+      - name: Set up Rust Android targets
+        run: |
+          rustup target add \
+            aarch64-linux-android \
+            armv7-linux-androideabi \
+            x86_64-linux-android
+          cargo install cargo-ndk --locked
+
+      - name: Prepare full adblock assets and native engine
+        env:
+          ANDROID_NDK_HOME: ${{ steps.setup_ndk.outputs.ndk-path }}
+        run: |
+          chmod +x tools/prepare-penrix-adblock.sh tools/build-penrix-adblock-android.sh
+          tools/prepare-penrix-adblock.sh
+          tools/build-penrix-adblock-android.sh
+          test -s app/src/main/assets/privateSites/adblock/filters.txt
+          test -s app/src/main/assets/privateSites/adblock/resources.json
+          test -s app/src/main/jniLibs/arm64-v8a/libpenrix_adblock.so
+          test -s app/src/main/jniLibs/armeabi-v7a/libpenrix_adblock.so
+          test -s app/src/main/jniLibs/x86_64/libpenrix_adblock.so
 
       - name: Validate managed book-source JSON
         run: |
