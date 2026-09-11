@@ -133,7 +133,7 @@ object PrivateSiteCleaner {
           });
           const seen = new Set();
           const navLinks = navCandidates.filter(a => {
-            const key = `${(a.textContent || '').trim()}|${a.href}`;
+            const key = (a.textContent || '').trim() + '|' + a.href;
             if (seen.has(key)) return false;
             seen.add(key);
             return true;
