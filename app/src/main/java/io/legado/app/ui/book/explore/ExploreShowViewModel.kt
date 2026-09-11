@@ -11,9 +11,9 @@ import io.legado.app.data.appDb
 import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.SearchBook
 import io.legado.app.help.book.isNotShelf
+import io.legado.app.help.source.ExploreFailureClassifier
 import io.legado.app.model.webBook.WebBook
 import io.legado.app.utils.printOnDebug
-import io.legado.app.utils.stackTraceStr
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.catch
@@ -88,9 +88,10 @@ class ExploreShowViewModel(application: Application) : BaseViewModel(application
                 pageLiveData.postValue(page)
             }.onError {
                 it.printOnDebug()
-                errorTopLiveData.postValue(it.stackTraceStr)
+                errorTopLiveData.postValue(ExploreFailureClassifier.fromThrowable(it))
             }
     }
+
     fun skipPage(page: Int) {
         if (page > 0) {
             books.clear()
@@ -105,6 +106,13 @@ class ExploreShowViewModel(application: Application) : BaseViewModel(application
         WebBook.exploreBook(viewModelScope, source, url, page)
             .timeout(if (BuildConfig.DEBUG) 0L else 60000L)
             .onSuccess(IO) { searchBooks ->
+                if (page == 1 && searchBooks.isEmpty()) {
+                    booksData.postValue(emptyList())
+                    errorLiveData.postValue(
+                        ExploreFailureClassifier.emptyFirstPage(source.bookSourceName)
+                    )
+                    return@onSuccess
+                }
                 books.addAll(searchBooks)
                 booksData.postValue(books.toList())
                 appDb.searchBookDao.insert(*searchBooks.toTypedArray())
@@ -112,7 +120,7 @@ class ExploreShowViewModel(application: Application) : BaseViewModel(application
                 page++
             }.onError {
                 it.printOnDebug()
-                errorLiveData.postValue(it.stackTraceStr)
+                errorLiveData.postValue(ExploreFailureClassifier.fromThrowable(it))
             }
     }
 
