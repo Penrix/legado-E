@@ -99,16 +99,27 @@ object PrivateSiteCleaner {
               };
 
               const removeBySelector = root => {
-                if (!root || !root.querySelectorAll) return;
+                if (!root) return false;
+                let removedRoot = false;
                 removeSelectors.forEach(selector => {
                   try {
-                    root.querySelectorAll(selector).forEach(el => el.remove());
+                    if (root.matches && root.matches(selector)) {
+                      root.remove();
+                      removedRoot = true;
+                      return;
+                    }
+                    if (root.querySelectorAll) {
+                      root.querySelectorAll(selector).forEach(el => el.remove());
+                    }
                   } catch (_) {}
                 });
+                return removedRoot;
               };
 
               const clean = root => {
-                if (!root || !root.querySelectorAll) return;
+                if (!root) return;
+                if (removeBySelector(root)) return;
+                if (!root.querySelectorAll) return;
                 root.querySelectorAll(
                   'iframe[src], script[src], img[src], source[src], video[poster], a[href]'
                 ).forEach(el => {
@@ -117,7 +128,6 @@ object PrivateSiteCleaner {
                     el.getAttribute('poster');
                   if (blockedUrl(value)) el.remove();
                 });
-                removeBySelector(root);
               };
 
               clean(document);
