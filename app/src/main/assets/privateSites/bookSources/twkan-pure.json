@@ -1,5 +1,5 @@
 {
-  "bookSourceComment": "Penrix 私人版 TWKAN。搜索同时尝试用户原始关键词与简转繁关键词，解决同站索引简繁混存导致的漏书；搜索结果、详情、目录与正文统一转简。",
+  "bookSourceComment": "Penrix 私人版 TWKAN。搜索同时尝试用户原始关键词与简转繁关键词，解决同站索引简繁混存导致的漏书；搜索结果、详情、目录与正文统一转简。正文净化直接在章节 HTML 内全局删除 TWKAN 域名/记住本站/Google 搜索等内嵌推广，避免广告与正文处于同一行时漏进原生阅读和 TTS。",
   "bookSourceGroup": "Penrix 内置",
   "bookSourceName": "TWKAN Pure",
   "bookSourceType": 0,
@@ -38,7 +38,7 @@
     "title": "<js>java.t2s(String(java.getString('h1@text')||''))</js>",
     "content": "#txtcontent0@html||#txtcontent@html||.txtnav@html",
     "nextContentUrl": "",
-    "replaceRegex": "<js>\nvar Normalizer=Packages.java.text.Normalizer;\nvar Form=Packages.java.text.Normalizer.Form.NFKC;\nvar cleaned=String(result||'').split(/\\r?\\n/).filter(function(line){\n  var normalized=String(Normalizer.normalize(String(line),Form)).replace(/\\s+/g,' ').trim();\n  if(!normalized)return true;\n  if(/[記记]住本站域名/i.test(normalized))return false;\n  if(/GOOGLE\\s*搜索\\s*TWKAN/i.test(normalized))return false;\n  if(/把本網(?:站)?分享到/i.test(normalized)||/把本网站分享到/i.test(normalized))return false;\n  if(/台[灣湾](?:小說網|小说网).*twkan\\.com/i.test(normalized))return false;\n  if(/^(?:www\\.)?(?:twkan|69shux)\\.com$/i.test(normalized))return false;\n  if(/^本章完[。.!！]?$/.test(normalized))return false;\n  return true;\n}).join('\\n');\njava.t2s(cleaned);\n</js>"
+    "replaceRegex": "<js>\nvar Normalizer=Packages.java.text.Normalizer;\nvar Form=Packages.java.text.Normalizer.Form.NFKC;\nvar html=String(Normalizer.normalize(String(result||''),Form));\n// TWKAN injects promotion inside the same HTML/text flow as the novel body. Do global\n// substitutions before Legado turns the HTML into reader text; line-based filtering misses it.\nhtml=html.replace(/〖[^〗]{0,500}[記记]住本站域名[^〗]{0,500}〗/gi,'');\nhtml=html.replace(/〖[^〗]{0,500}(?:twkan|69shux)[^〗]{0,500}〗/gi,'');\nhtml=html.replace(/(?:GOOGLE\\s*搜索\\s*TWKAN|把本網(?:站)?分享到[^<\\r\\n]{0,220}|把本网站分享到[^<\\r\\n]{0,220})/gi,'');\nhtml=html.replace(/(?:台|臺)[灣湾](?:小[説說说]|小說|小说)(?:網|网)[^<\\r\\n]{0,180}(?:twkan\\.com)?/gi,function(m){return /twkan|本站域名|分享|搜索/i.test(m)?'':m;});\nhtml=html.replace(/(?:www\\.)?(?:twkan|69shux)\\.com/gi,'');\nhtml=html.replace(/(?:<p[^>]*>\\s*)?本章完[。.!！]?\\s*(?:<\\/p>)?/gi,'');\nhtml=html.replace(/(?:<br\\s*\\/?>\\s*){3,}/gi,'<br><br>');\njava.t2s(html);\n</js>"
   },
   "lastUpdateTime": "1789095600000"
 }
