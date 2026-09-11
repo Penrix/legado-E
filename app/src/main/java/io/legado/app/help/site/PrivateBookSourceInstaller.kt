@@ -19,6 +19,7 @@ object PrivateBookSourceInstaller {
 
     const val MANAGED_GROUP = "Penrix 内置"
     private const val MANAGED_KEY_MARKER = "penrix_builtin="
+    private const val TEMP_DISABLED_DIYIBANZHU_MARKER = "penrix_builtin=diyibanzhu"
 
     private val assetPaths = listOf(
         "privateSites/bookSources/twkan-pure.json",
@@ -44,6 +45,14 @@ object PrivateBookSourceInstaller {
                 source.enabledExplore = existing.enabledExplore
                 source.customOrder = existing.customOrder
             }
+
+            // The current first-edition adapter cannot yet guarantee a complete decoded chapter.
+            // Keep its stable website entry, but never let an older installed enabled state revive
+            // the native BookSource until that decoding/pagination chain is verified end to end.
+            if (source.bookSourceUrl.contains(TEMP_DISABLED_DIYIBANZHU_MARKER)) {
+                source.enabled = false
+            }
+
             appDb.bookSourceDao.insert(source)
         }
         PrivateReadingDefaults.applyToExistingBooks()
