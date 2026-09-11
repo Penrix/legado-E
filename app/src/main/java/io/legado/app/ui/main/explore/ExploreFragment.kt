@@ -12,6 +12,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.chip.Chip
 import io.legado.app.R
 import io.legado.app.base.VMBaseFragment
 import io.legado.app.constant.AppLog
@@ -20,12 +21,14 @@ import io.legado.app.data.appDb
 import io.legado.app.data.entities.BookSourcePart
 import io.legado.app.databinding.FragmentExploreBinding
 import io.legado.app.help.config.AppConfig
+import io.legado.app.help.site.PrivateSiteRegistry
 import io.legado.app.lib.dialogs.alert
 import io.legado.app.lib.theme.primaryColor
 import io.legado.app.lib.theme.primaryTextColor
 import io.legado.app.ui.book.explore.ExploreShowActivity
 import io.legado.app.ui.book.search.SearchActivity
 import io.legado.app.ui.book.source.edit.BookSourceEditActivity
+import io.legado.app.ui.browser.WebViewActivity
 import io.legado.app.ui.main.MainFragmentInterface
 import io.legado.app.utils.applyTint
 import io.legado.app.utils.flowWithLifecycleAndDatabaseChange
@@ -44,7 +47,7 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
 
 /**
- * 发现界面
+ * 第二栏：私人站点是第一层入口，原 Legado 发现源保留在下方作为兼容能力。
  */
 class ExploreFragment() : VMBaseFragment<ExploreViewModel>(R.layout.fragment_explore),
     MainFragmentInterface,
@@ -72,6 +75,7 @@ class ExploreFragment() : VMBaseFragment<ExploreViewModel>(R.layout.fragment_exp
 
     override fun onFragmentCreated(view: View, savedInstanceState: Bundle?) {
         setSupportToolbar(binding.titleBar.toolbar)
+        initPrivateSiteHub()
         initSearchView()
         initRecyclerView()
         initGroupData()
@@ -85,10 +89,37 @@ class ExploreFragment() : VMBaseFragment<ExploreViewModel>(R.layout.fragment_exp
         upGroupsMenu()
     }
 
+    private fun initPrivateSiteHub() {
+        binding.privateSiteGroup.removeAllViews()
+
+        binding.privateSiteGroup.addView(siteChip("搜书") {
+            SearchActivity.start(requireContext(), key = null, searchScope = null)
+        })
+
+        PrivateSiteRegistry.profiles.forEach { site ->
+            binding.privateSiteGroup.addView(siteChip(site.displayName) {
+                startActivity<WebViewActivity> {
+                    putExtra("url", site.startUrl)
+                    putExtra("title", site.displayName)
+                    putExtra("sourceName", "Penrix 私人站点")
+                }
+            })
+        }
+    }
+
+    private fun siteChip(label: String, onClick: () -> Unit): Chip {
+        return Chip(requireContext()).apply {
+            text = label
+            isCheckable = false
+            isClickable = true
+            setOnClickListener { onClick() }
+        }
+    }
+
     private fun initSearchView() {
         searchView.applyTint(primaryTextColor)
         searchView.isSubmitButtonEnabled = true
-        searchView.queryHint = getString(R.string.screen_find)
+        searchView.queryHint = "筛选书源"
         searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
             override fun onQueryTextSubmit(query: String?): Boolean {
                 return false
