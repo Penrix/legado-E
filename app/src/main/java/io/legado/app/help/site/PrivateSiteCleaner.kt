@@ -28,6 +28,14 @@ object PrivateSiteCleaner {
         return !sourceVerification && isManagedSite(url)
     }
 
+    /**
+     * The JavaScript bridge exists only for TWKAN's traditional-to-simplified conversion.
+     * Other managed sites never need access to an Android JavaScript interface.
+     */
+    fun shouldInstallBridge(url: String?, sourceVerification: Boolean): Boolean {
+        return !sourceVerification && isTwkan(url)
+    }
+
     fun shouldBlockRequest(
         pageUrl: String?,
         requestUrl: String?,
@@ -46,8 +54,9 @@ object PrivateSiteCleaner {
         val profile = PrivateSiteRegistry.profileFor(url) ?: return null
         return when {
             isTwkanChapter(url) -> twkanChapterPureScript
+            isTwkan(url) -> twkanGeneralCleanupScript
             profile.kind == PrivateSiteKind.VIDEO -> videoSiteCleanupScript
-            else -> twkanGeneralCleanupScript
+            else -> genericSiteCleanupScript
         }
     }
 
@@ -64,6 +73,51 @@ object PrivateSiteCleaner {
           document.querySelectorAll(
             'iframe[src*="facebook.com"], iframe[src*="googletagmanager.com"], .adsbygoogle, ins.adsbygoogle'
           ).forEach(el => el.remove());
+        })();
+    """.trimIndent()
+
+    /**
+     * Generic cleanup for built-in novel/forum/navigation sites. This deliberately limits
+     * itself to known third-party ad/tracker URLs and Google ad containers; it does not hide
+     * first-party navigation, login, purchase, points, forum or content elements.
+     */
+    private val genericSiteCleanupScript = """
+        (() => {
+          const blockedHostSuffixes = [
+            'googletagmanager.com',
+            'google-analytics.com',
+            'doubleclick.net',
+            'googlesyndication.com',
+            'trafficjunky.net',
+            'exoclick.com',
+            'exosrv.com',
+            'juicyads.com',
+            'popads.net',
+            'popcash.net'
+          ];
+
+          const blockedUrl = value => {
+            if (!value) return false;
+            try {
+              const host = new URL(value, location.href).hostname.toLowerCase();
+              return blockedHostSuffixes.some(suffix =>
+                host === suffix || host.endsWith('.' + suffix)
+              );
+            } catch (_) {
+              return false;
+            }
+          };
+
+          const clean = root => {
+            if (!root || !root.querySelectorAll) return;
+            root.querySelectorAll('iframe[src], script[src], img[src], a[href]').forEach(el => {
+              const value = el.getAttribute('src') || el.getAttribute('href');
+              if (blockedUrl(value)) el.remove();
+            });
+            root.querySelectorAll('ins.adsbygoogle, .adsbygoogle').forEach(el => el.remove());
+          };
+
+          clean(document);
         })();
     """.trimIndent()
 
