@@ -20,7 +20,8 @@ object PrivateBookSourceInstaller {
     private const val MANAGED_KEY_MARKER = "penrix_builtin="
 
     private val assetPaths = listOf(
-        "privateSites/bookSources/twkan-pure.json"
+        "privateSites/bookSources/twkan-pure.json",
+        "privateSites/bookSources/69shuba-pure.json"
     )
 
     fun installOrUpdate() {
