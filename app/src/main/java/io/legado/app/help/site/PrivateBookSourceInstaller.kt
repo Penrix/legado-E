@@ -34,7 +34,8 @@ object PrivateBookSourceInstaller {
         ManagedAsset("privateSites/bookSources/diyibanzhu-pure.json", BUILTIN_GROUP, "penrix_builtin="),
         ManagedAsset("privateSites/bookSources/uaa-pure.json", BUILTIN_GROUP, "penrix_builtin="),
         ManagedAsset("privateSites/communityCurated/uukanshu-curated.json", CURATED_GROUP, "penrix_curated="),
-        ManagedAsset("privateSites/communityCurated/quanben-io-curated.json", CURATED_GROUP, "penrix_curated=")
+        ManagedAsset("privateSites/communityCurated/quanben-io-curated.json", CURATED_GROUP, "penrix_curated="),
+        ManagedAsset("privateSites/communityCurated/cool18-curated.json", CURATED_GROUP, "penrix_curated=")
     )
 
     fun installOrUpdate() {
