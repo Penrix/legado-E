@@ -1,0 +1,51 @@
+{
+  "bookSourceComment": "Penrix 社区精选 · Cool18 禁忌书屋。基线参考源仓库 busa 2026-08-01 当前 HTML 规则；第一版按‘一个帖子=一本单章书’接入 Sigma，因此可直接阅读/朗读，后续再做同系列多帖合并。社区基线：https://www.yckceo.com/yuedu/shuyuan/content/id/7639.html",
+  "bookSourceGroup": "Penrix 社区精选",
+  "bookSourceName": "禁忌书屋 · 精选",
+  "bookSourceType": 0,
+  "bookSourceUrl": "https://www.cool18.com/bbs4?penrix_curated=cool18",
+  "customOrder": -7880,
+  "enabled": true,
+  "enabledCookieJar": true,
+  "enabledExplore": true,
+  "header": "{\"User-Agent\":\"Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0 Mobile Safari/537.36\",\"Accept-Language\":\"zh-CN,zh;q=0.9\"}",
+  "loginUrl": "https://www.cool18.com/pub_page/index.php?action=login",
+  "searchUrl": "https://www.cool18.com/bbs4/index.php?action=search&act=threadsearch&app=forum&keywords={{java.encodeURI(key)}}&submit=%E6%9F%A5%E8%AF%A2&p={{page}}",
+  "exploreUrl": "都市::https://www.cool18.com/bbs4/index.php?action=search&act=threadsearch&app=forum&type=%E9%83%BD%E5%B8%82&submit=%E6%9F%A5%E8%AF%A2&p={{page}}\n校园::https://www.cool18.com/bbs4/index.php?action=search&act=threadsearch&app=forum&type=%E6%A0%A1%E5%9B%AD&submit=%E6%9F%A5%E8%AF%A2&p={{page}}\n乡野::https://www.cool18.com/bbs4/index.php?action=search&act=threadsearch&app=forum&type=%E4%B9%A1%E9%87%8E&submit=%E6%9F%A5%E8%AF%A2&p={{page}}\n古风::https://www.cool18.com/bbs4/index.php?action=search&act=threadsearch&app=forum&type=%E5%8F%A4%E9%A3%8E&submit=%E6%9F%A5%E8%AF%A2&p={{page}}\n异国::https://www.cool18.com/bbs4/index.php?action=search&act=threadsearch&app=forum&type=%E5%BC%82%E5%9B%BD&submit=%E6%9F%A5%E8%AF%A2&p={{page}}\n玄幻::https://www.cool18.com/bbs4/index.php?action=search&act=threadsearch&app=forum&type=%E7%8E%84%E5%B9%BB&submit=%E6%9F%A5%E8%AF%A2&p={{page}}\n红绿::https://www.cool18.com/bbs4/index.php?action=search&act=threadsearch&app=forum&type=%E7%BA%A2%E7%BB%BF&submit=%E6%9F%A5%E8%AF%A2&p={{page}}\n伦理::https://www.cool18.com/bbs4/index.php?action=search&act=threadsearch&app=forum&type=%E4%BC%A6%E7%90%86&submit=%E6%9F%A5%E8%AF%A2&p={{page}}\n独爱::https://www.cool18.com/bbs4/index.php?action=search&act=threadsearch&app=forum&type=%E7%8B%AC%E7%88%B1&submit=%E6%9F%A5%E8%AF%A2&p={{page}}\n其他::https://www.cool18.com/bbs4/index.php?action=search&act=threadsearch&app=forum&type=%E5%85%B6%E4%BB%96&submit=%E6%9F%A5%E8%AF%A2&p={{page}}\n精华热帖::https://www.cool18.com/bbs4/index.php?app=forum&act=gold&p={{page}}\n人气热帖::https://www.cool18.com/bbs4/index.php?app=forum&act=hot&p={{page}}",
+  "ruleSearch": {
+    "bookList": "@css:.thread-list li",
+    "name": "@css:a@text",
+    "author": "@css:font@text",
+    "kind": "禁忌书屋",
+    "lastUpdateTime": "@css:i@text",
+    "intro": "@css:a@text",
+    "bookUrl": "@css:a@href"
+  },
+  "ruleExplore": {
+    "bookList": "@css:.thread-list li",
+    "name": "@css:a@text",
+    "author": "@css:font@text",
+    "kind": "禁忌书屋",
+    "lastUpdateTime": "@css:i@text",
+    "intro": "@css:a@text",
+    "bookUrl": "@css:a@href"
+  },
+  "ruleBookInfo": {
+    "name": "@css:.main-title@text",
+    "author": "@css:meta[name=author]@content",
+    "kind": "论坛帖子",
+    "intro": "@css:meta[name=description]@content",
+    "tocUrl": "@js:baseUrl"
+  },
+  "ruleToc": {
+    "chapterList": "@css:.title-section",
+    "chapterName": "@css:.main-title@text",
+    "chapterUrl": "@js:baseUrl"
+  },
+  "ruleContent": {
+    "title": "@css:.main-title@text",
+    "content": "@css:#content-section pre@text##\\n{3,}##\\n\\n",
+    "nextContentUrl": ""
+  },
+  "lastUpdateTime": "1789095600000"
+}
