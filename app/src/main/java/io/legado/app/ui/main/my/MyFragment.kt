@@ -12,6 +12,8 @@ import io.legado.app.constant.EventBus
 import io.legado.app.constant.PreferKey
 import io.legado.app.databinding.FragmentMyConfigBinding
 import io.legado.app.help.config.ThemeConfig
+import io.legado.app.help.site.PrivateSiteKind
+import io.legado.app.help.site.PrivateSiteRegistry
 import io.legado.app.lib.dialogs.selector
 import io.legado.app.lib.prefs.NameListPreference
 import io.legado.app.lib.prefs.SwitchPreference
@@ -23,6 +25,7 @@ import io.legado.app.ui.about.ReadRecordActivity
 import io.legado.app.ui.book.bookmark.AllBookmarkActivity
 import io.legado.app.ui.book.source.manage.BookSourceActivity
 import io.legado.app.ui.book.toc.rule.TxtTocRuleActivity
+import io.legado.app.ui.browser.WebViewActivity
 import io.legado.app.ui.config.ConfigActivity
 import io.legado.app.ui.config.ConfigTag
 import io.legado.app.ui.dict.rule.DictRuleActivity
@@ -145,6 +148,7 @@ class MyFragment() : BaseFragment(R.layout.fragment_my_config), MainFragmentInte
         override fun onPreferenceTreeClick(preference: Preference): Boolean {
             when (preference.key) {
                 "bookSourceManage" -> startActivity<BookSourceActivity>()
+                "privateSites" -> openPrivateSites()
                 "replaceManage" -> startActivity<ReplaceRuleActivity>()
                 "dictRuleManage" -> startActivity<DictRuleActivity>()
                 "txtTocRuleManage" -> startActivity<TxtTocRuleActivity>()
@@ -169,6 +173,26 @@ class MyFragment() : BaseFragment(R.layout.fragment_my_config), MainFragmentInte
             return super.onPreferenceTreeClick(preference)
         }
 
+        private fun openPrivateSites() {
+            val sites = PrivateSiteRegistry.profiles
+            val labels = ArrayList(sites.map { site ->
+                val kind = when (site.kind) {
+                    PrivateSiteKind.NOVEL -> "小说"
+                    PrivateSiteKind.FORUM -> "论坛"
+                    PrivateSiteKind.VIDEO -> "视频"
+                    PrivateSiteKind.NAVIGATION -> "导航"
+                }
+                "$kind · ${site.displayName}"
+            })
+            context?.selector(labels) { _, index ->
+                val site = sites[index]
+                startActivity<WebViewActivity> {
+                    putExtra("url", site.startUrl)
+                    putExtra("title", site.displayName)
+                    putExtra("sourceName", "Penrix 私人站点")
+                }
+            }
+        }
 
     }
 }
