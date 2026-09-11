@@ -1,0 +1,38 @@
+{
+  "bookSourceComment": "Penrix 私人版内置第一版主。稳定身份为 diyibanzhu，当前首选内容镜像使用 111bz.cc；镜像域名不是站点身份，后续可由 PrivateSiteDomainResolver 切换。规则只处理正常搜索、目录和正文净化，不绕过任何登录或站点权限。",
+  "bookSourceGroup": "Penrix 内置",
+  "bookSourceName": "第一版主 Pure",
+  "bookSourceType": 0,
+  "bookSourceUrl": "https://www.111bz.cc/?penrix_builtin=diyibanzhu",
+  "bookUrlPattern": "https?:\\/\\/(?:m\\.|www\\.)?111bz\\.cc\\/[^?#]+",
+  "customOrder": -8970,
+  "enabled": true,
+  "enabledCookieJar": true,
+  "enabledExplore": false,
+  "header": "<js>(function(){var ua='';try{ua=String(java.getWebViewUA()||'');}catch(e){}if(ua.indexOf('Mozilla')!==0)ua='Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0 Mobile Safari/537.36';return JSON.stringify({'User-Agent':ua,'Referer':'https://www.111bz.cc/','Accept-Language':'zh-CN,zh;q=0.9'});})()</js>",
+  "searchUrl": "https://www.111bz.cc/modules/article/search.php?searchkey={{java.encodeURI(key,'gbk')}}&searchtype=articlename&page={{page}},{\"charset\":\"gbk\"}",
+  "ruleSearch": {
+    "bookList": "tag.tbody.0@id.nr",
+    "name": "class.odd.0@tag.a@text",
+    "author": "class.odd.1@text",
+    "bookUrl": "class.odd.0@tag.a@href",
+    "lastChapter": "class.even.0@tag.a@text"
+  },
+  "ruleBookInfo": {
+    "name": "tag.h1@text",
+    "author": "id.info@tag.p.0@text##作\\s*者[:：]?##",
+    "coverUrl": "id.fmimg@tag.img@src",
+    "intro": "id.intro@tag.p@text",
+    "lastChapter": "tag.dl@tag.dd.0@tag.a@text"
+  },
+  "ruleToc": {
+    "chapterList": "tag.dl@tag.dd",
+    "chapterName": "tag.a@text",
+    "chapterUrl": "tag.a@href"
+  },
+  "ruleContent": {
+    "content": "id.content@text",
+    "replaceRegex": "##请记住本站.*|第一版主.*(?:最新网址|发布页|备用网址).*|www\\.111bz\\.cc|手机用户请浏览.*|章节错误.*点击.*"
+  },
+  "lastUpdateTime": "1789095600000"
+}
