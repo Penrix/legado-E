@@ -19,7 +19,9 @@ class PrivateSiteRegistryTest {
     @Test
     fun `bachashuku mirrors share one identity`() {
         assertEquals("bachashuku", PrivateSiteRegistry.profileFor("https://8xsk.com/")?.id)
+        assertEquals("bachashuku", PrivateSiteRegistry.profileFor("https://8xsk.org/")?.id)
         assertEquals("bachashuku", PrivateSiteRegistry.profileFor("https://www.bachashuku.org/book/718.html")?.id)
+        assertTrue(PrivateSiteRegistry.bachashuku.requiresLogin)
     }
 
     @Test
@@ -35,8 +37,9 @@ class PrivateSiteRegistryTest {
     }
 
     @Test
-    fun `ordinary long tail novel sites are registered`() {
+    fun `selected long tail novel sites are registered`() {
         assertEquals("69shuba", PrivateSiteRegistry.profileFor("https://www.69shuba.com/book/1.htm")?.id)
+        assertEquals("uukan", PrivateSiteRegistry.profileFor("https://uukanshu.cc/book/example")?.id)
         assertEquals("uukan", PrivateSiteRegistry.profileFor("https://www.uukan.org/chapter/example")?.id)
         assertEquals("quanben", PrivateSiteRegistry.profileFor("https://www.quanben.io/n/example/1.html")?.id)
     }
