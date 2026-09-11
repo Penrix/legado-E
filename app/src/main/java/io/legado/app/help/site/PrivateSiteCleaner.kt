@@ -28,10 +28,7 @@ object PrivateSiteCleaner {
         return !sourceVerification && isManagedSite(url)
     }
 
-    /**
-     * The JavaScript bridge exists only for TWKAN's traditional-to-simplified conversion.
-     * Other managed sites never need access to an Android JavaScript interface.
-     */
+    /** The JavaScript bridge exists only for TWKAN's traditional-to-simplified conversion. */
     fun shouldInstallBridge(url: String?, sourceVerification: Boolean): Boolean {
         return !sourceVerification && isTwkan(url)
     }
@@ -54,9 +51,7 @@ object PrivateSiteCleaner {
         val profile = PrivateSiteRegistry.profileFor(url) ?: return null
         return when {
             isTwkanChapter(url) -> twkanChapterPureScript
-            isTwkan(url) -> twkanGeneralCleanupScript
-            profile.kind == PrivateSiteKind.VIDEO -> videoSiteCleanupScript
-            else -> genericSiteCleanupScript
+            else -> cleanupScript(profile)
         }
     }
 
@@ -68,121 +63,131 @@ object PrivateSiteCleaner {
 
     private fun hostOf(url: String?): String? = PrivateSiteRegistry.hostOf(url)
 
-    private val twkanGeneralCleanupScript = """
-        (() => {
-          document.querySelectorAll(
-            'iframe[src*="facebook.com"], iframe[src*="googletagmanager.com"], .adsbygoogle, ins.adsbygoogle'
-          ).forEach(el => el.remove());
-        })();
-    """.trimIndent()
-
     /**
-     * Generic cleanup for built-in novel/forum/navigation sites. This deliberately limits
-     * itself to known third-party ad/tracker URLs and Google ad containers; it does not hide
-     * first-party navigation, login, purchase, points, forum or content elements.
+     * Build cleanup JavaScript from the selected site's own profile.
+     *
+     * Four layers are used:
+     * 1. WebView request interception blocks known third-party ad/tracker hosts before loading.
+     * 2. This script removes matching DOM nodes and site-specific ad selectors.
+     * 3. MutationObserver repeats cleanup for ads injected after page load.
+     * 4. Click/window.open guards suppress navigation to known ad hosts without blocking normal links.
      */
-    private val genericSiteCleanupScript = """
-        (() => {
-          const blockedHostSuffixes = [
-            'googletagmanager.com',
-            'google-analytics.com',
-            'doubleclick.net',
-            'googlesyndication.com',
-            'trafficjunky.net',
-            'exoclick.com',
-            'exosrv.com',
-            'juicyads.com',
-            'popads.net',
-            'popcash.net'
-          ];
+    private fun cleanupScript(profile: PrivateSiteProfile): String {
+        val blockedHosts = profile.blockedHostSuffixes
+            .sorted()
+            .joinToString(",") { jsString(it) }
+        val selectors = profile.domRemoveSelectors
+            .sorted()
+            .joinToString(",") { jsString(it) }
+        val observerKey = "__penrixCleaner_${profile.id.replace(Regex("[^A-Za-z0-9_]"), "_")}" 
 
-          const blockedUrl = value => {
-            if (!value) return false;
-            try {
-              const host = new URL(value, location.href).hostname.toLowerCase();
-              return blockedHostSuffixes.some(suffix =>
-                host === suffix || host.endsWith('.' + suffix)
-              );
-            } catch (_) {
-              return false;
-            }
-          };
+        return """
+            (() => {
+              const blockedHostSuffixes = [$blockedHosts];
+              const removeSelectors = [$selectors];
 
-          const clean = root => {
-            if (!root || !root.querySelectorAll) return;
-            root.querySelectorAll('iframe[src], script[src], img[src], a[href]').forEach(el => {
-              const value = el.getAttribute('src') || el.getAttribute('href');
-              if (blockedUrl(value)) el.remove();
-            });
-            root.querySelectorAll('ins.adsbygoogle, .adsbygoogle').forEach(el => el.remove());
-          };
+              const blockedUrl = value => {
+                if (!value) return false;
+                try {
+                  const host = new URL(value, location.href).hostname.toLowerCase();
+                  return blockedHostSuffixes.some(suffix =>
+                    host === suffix || host.endsWith('.' + suffix)
+                  );
+                } catch (_) {
+                  return false;
+                }
+              };
 
-          clean(document);
-        })();
-    """.trimIndent()
-
-    /**
-     * Conservative video cleanup. Request-level blocking handles known third-party ad hosts;
-     * this removes their empty DOM shells and common Google ad containers without touching
-     * first-party video/player elements, login UI, age gates or regional restrictions.
-     */
-    private val videoSiteCleanupScript = """
-        (() => {
-          const blockedHostSuffixes = [
-            'googletagmanager.com',
-            'google-analytics.com',
-            'doubleclick.net',
-            'googlesyndication.com',
-            'trafficjunky.net',
-            'exoclick.com',
-            'exosrv.com',
-            'juicyads.com',
-            'popads.net',
-            'popcash.net'
-          ];
-
-          const blockedUrl = value => {
-            if (!value) return false;
-            try {
-              const host = new URL(value, location.href).hostname.toLowerCase();
-              return blockedHostSuffixes.some(suffix =>
-                host === suffix || host.endsWith('.' + suffix)
-              );
-            } catch (_) {
-              return false;
-            }
-          };
-
-          const clean = root => {
-            if (!root || !root.querySelectorAll) return;
-            root.querySelectorAll('iframe[src], script[src], img[src], a[href]').forEach(el => {
-              const value = el.getAttribute('src') || el.getAttribute('href');
-              if (blockedUrl(value)) el.remove();
-            });
-            root.querySelectorAll('ins.adsbygoogle, .adsbygoogle').forEach(el => el.remove());
-          };
-
-          clean(document);
-
-          if (!window.__penrixVideoCleanerObserver) {
-            const observer = new MutationObserver(records => {
-              records.forEach(record => {
-                record.addedNodes.forEach(node => {
-                  if (node.nodeType !== Node.ELEMENT_NODE) return;
-                  const value = node.getAttribute?.('src') || node.getAttribute?.('href');
-                  if (blockedUrl(value)) {
-                    node.remove();
-                    return;
-                  }
-                  clean(node);
+              const removeBySelector = root => {
+                if (!root || !root.querySelectorAll) return;
+                removeSelectors.forEach(selector => {
+                  try {
+                    root.querySelectorAll(selector).forEach(el => el.remove());
+                  } catch (_) {}
                 });
-              });
-            });
-            observer.observe(document.documentElement, { childList: true, subtree: true });
-            window.__penrixVideoCleanerObserver = observer;
-          }
-        })();
-    """.trimIndent()
+              };
+
+              const clean = root => {
+                if (!root || !root.querySelectorAll) return;
+                root.querySelectorAll(
+                  'iframe[src], script[src], img[src], source[src], video[poster], a[href]'
+                ).forEach(el => {
+                  const value = el.getAttribute('src') ||
+                    el.getAttribute('href') ||
+                    el.getAttribute('poster');
+                  if (blockedUrl(value)) el.remove();
+                });
+                removeBySelector(root);
+              };
+
+              clean(document);
+
+              if (!window.$observerKey) {
+                document.addEventListener('click', event => {
+                  const target = event.target;
+                  const anchor = target && target.closest ? target.closest('a[href]') : null;
+                  if (anchor && blockedUrl(anchor.href)) {
+                    event.preventDefault();
+                    event.stopImmediatePropagation();
+                  }
+                }, true);
+
+                const nativeOpen = window.open ? window.open.bind(window) : null;
+                if (nativeOpen && !window.__penrixNativeWindowOpen) {
+                  window.__penrixNativeWindowOpen = nativeOpen;
+                  window.open = function(url, ...args) {
+                    if (blockedUrl(url)) return null;
+                    return nativeOpen(url, ...args);
+                  };
+                }
+
+                const observer = new MutationObserver(records => {
+                  records.forEach(record => {
+                    if (record.type === 'attributes') {
+                      const node = record.target;
+                      const value = node.getAttribute?.('src') ||
+                        node.getAttribute?.('href') ||
+                        node.getAttribute?.('poster');
+                      if (blockedUrl(value)) {
+                        node.remove?.();
+                        return;
+                      }
+                      clean(node);
+                      return;
+                    }
+                    record.addedNodes.forEach(node => {
+                      if (node.nodeType !== Node.ELEMENT_NODE) return;
+                      const value = node.getAttribute?.('src') ||
+                        node.getAttribute?.('href') ||
+                        node.getAttribute?.('poster');
+                      if (blockedUrl(value)) {
+                        node.remove();
+                        return;
+                      }
+                      clean(node);
+                    });
+                  });
+                });
+                observer.observe(document.documentElement, {
+                  childList: true,
+                  subtree: true,
+                  attributes: true,
+                  attributeFilter: ['src', 'href', 'poster']
+                });
+                window.$observerKey = observer;
+              }
+            })();
+        """.trimIndent()
+    }
+
+    private fun jsString(value: String): String {
+        val escaped = value
+            .replace("\\", "\\\\")
+            .replace("\"", "\\\"")
+            .replace("\n", "\\n")
+            .replace("\r", "\\r")
+        return "\"$escaped\""
+    }
 
     /**
      * TWKAN chapter pages have stable content containers used by current community sources:
