@@ -47,6 +47,7 @@ import io.legado.app.help.http.Cronet
 import io.legado.app.help.http.ObsoleteUrlFactory
 import io.legado.app.help.http.okHttpClient
 import io.legado.app.help.rhino.NativeBaseSource
+import io.legado.app.help.site.PrivateAdBlock
 import io.legado.app.help.source.SourceHelp
 import io.legado.app.help.storage.Backup
 import io.legado.app.model.BookCover
@@ -77,10 +78,15 @@ class App : Application() {
         applyDayNightInit(this)
         registerActivityLifecycleCallbacks(LifecycleHelp)
         defaultSharedPreferences.registerOnSharedPreferenceChangeListener(AppConfig)
+        // ServiceWorkerClient must be installed before managed WebViews start creating workers.
+        PrivateAdBlock.installServiceWorkerClient()
         Coroutine.async {
             LogUtils.init(this@App)
             LogUtils.d("App", "onCreate")
             LogUtils.logDeviceInfo()
+            // Compile the bundled filter lists once off the UI thread. WebViewActivity also
+            // calls ensureInitialized as a fallback if a managed page is opened immediately.
+            PrivateAdBlock.ensureInitialized(this@App)
             //预下载Cronet so
             Cronet.preDownload()
             createNotificationChannels()
