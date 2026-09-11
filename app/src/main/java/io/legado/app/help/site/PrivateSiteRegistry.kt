@@ -72,10 +72,19 @@ object PrivateSiteRegistry {
         "iframe[name^='google_ads']"
     )
 
+    private val adultVideoOverlaySelectors = setOf(
+        "[class*='popunder']",
+        "[id*='popunder']",
+        "[class*='popup-ad']",
+        "[id*='popup-ad']",
+        "[class*='ad-overlay']",
+        "[id*='ad-overlay']"
+    )
+
     val twkan = PrivateSiteProfile(
         id = "twkan",
         displayName = "TWKAN",
-        startUrl = "https://twkan.com/",
+        startUrl = "https://twkan.com/?t=1",
         kind = PrivateSiteKind.NOVEL,
         rootDomains = setOf("twkan.com"),
         fingerprintTerms = setOf("TWKAN", "台湾小说", "台灣小說"),
@@ -123,7 +132,7 @@ object PrivateSiteRegistry {
     val diyibanzhu = PrivateSiteProfile(
         id = "diyibanzhu",
         displayName = "第一版主",
-        startUrl = "https://diyibanzhu.me/",
+        startUrl = "https://m.diyibanzhu.me/",
         kind = PrivateSiteKind.NOVEL,
         rootDomains = setOf(
             "diyibanzhu.me",
@@ -131,24 +140,32 @@ object PrivateSiteRegistry {
             "111bz.cc"
         ),
         entryUrls = setOf(
+            "https://m.diyibanzhu.me/",
             "https://diyibanzhu.me/",
             "https://diyibanzhu.quest/",
             "https://111bz.cc/"
         ),
         fingerprintTerms = setOf("第一版主"),
         adult = true,
-        blockedHostSuffixes = commonTrackerHosts + commonAdultAdHosts,
-        domRemoveSelectors = commonAdSelectors
+        blockedHostSuffixes = commonTrackerHosts + commonAdultAdHosts + setOf(
+            "5mgrgsc.cn",
+            "6uzxtlv.cn",
+            "holmesmind.com"
+        ),
+        domRemoveSelectors = commonAdSelectors + setOf(
+            "iframe[src*='5mgrgsc.cn']",
+            "a[href*='5mgrgsc.cn']"
+        )
     )
 
     val bachashuku = PrivateSiteProfile(
         id = "bachashuku",
         displayName = "八叉书库",
-        startUrl = "https://www.bachashuku.org/",
+        startUrl = "https://bachashuku.org/",
         kind = PrivateSiteKind.NOVEL,
         rootDomains = setOf("8xsk.com", "8xsk.org", "bachashuku.org"),
         entryUrls = setOf(
-            "https://www.bachashuku.org/",
+            "https://bachashuku.org/",
             "https://8xsk.com/",
             "https://8xsk.org/"
         ),
@@ -165,7 +182,7 @@ object PrivateSiteRegistry {
         startUrl = "https://www.uaa.com/",
         kind = PrivateSiteKind.NOVEL,
         rootDomains = setOf("uaa.com"),
-        fingerprintTerms = setOf("UAA"),
+        fingerprintTerms = setOf("UAA", "有爱爱"),
         adult = true,
         requiresLogin = true,
         blockedHostSuffixes = commonTrackerHosts + commonAdultAdHosts,
@@ -195,7 +212,11 @@ object PrivateSiteRegistry {
         fingerprintTerms = setOf("Cool18", "禁忌书屋"),
         adult = true,
         blockedHostSuffixes = commonTrackerHosts + commonAdultAdHosts,
-        domRemoveSelectors = commonAdSelectors
+        domRemoveSelectors = commonAdSelectors + setOf(
+            "iframe[src*='ad']",
+            "[class*='advert']",
+            "[id*='advert']"
+        )
     )
 
     val hanime1 = PrivateSiteProfile(
@@ -207,10 +228,13 @@ object PrivateSiteRegistry {
         fingerprintTerms = setOf("Hanime1"),
         adult = true,
         blockedHostSuffixes = commonTrackerHosts + commonAdultAdHosts + setOf(
-            "erodalabs.com"
+            "erodalabs.com",
+            "impactserving.com"
         ),
-        domRemoveSelectors = commonAdSelectors + setOf(
-            "a[href*='erodalabs.com']"
+        domRemoveSelectors = commonAdSelectors + adultVideoOverlaySelectors + setOf(
+            "a[href*='erodalabs.com']",
+            "a[href*='impactserving.com']",
+            "iframe[src*='impactserving.com']"
         )
     )
 
@@ -224,7 +248,7 @@ object PrivateSiteRegistry {
         adult = true,
         regionSensitive = true,
         blockedHostSuffixes = commonTrackerHosts + commonAdultAdHosts,
-        domRemoveSelectors = commonAdSelectors
+        domRemoveSelectors = commonAdSelectors + adultVideoOverlaySelectors
     )
 
     val xvideos = PrivateSiteProfile(
@@ -237,7 +261,7 @@ object PrivateSiteRegistry {
         adult = true,
         regionSensitive = true,
         blockedHostSuffixes = commonTrackerHosts + commonAdultAdHosts,
-        domRemoveSelectors = commonAdSelectors
+        domRemoveSelectors = commonAdSelectors + adultVideoOverlaySelectors
     )
 
     val missav = PrivateSiteProfile(
@@ -245,19 +269,32 @@ object PrivateSiteRegistry {
         displayName = "MissAV",
         startUrl = "https://missav.ws/",
         kind = PrivateSiteKind.VIDEO,
-        rootDomains = setOf("missav.ws"),
+        rootDomains = setOf("missav.ws", "missav.com"),
         fingerprintTerms = setOf("MissAV"),
         adult = true,
         regionSensitive = true,
         blockedHostSuffixes = commonTrackerHosts + commonAdultAdHosts + setOf(
             "mayzaent.com",
             "bit.ly",
-            "myavlive.com"
+            "myavlive.com",
+            "creative.myavlive.com",
+            "creative.live.missav.com",
+            "trackwilltrk.com",
+            "rmhfrtnd.com",
+            "ktkjmp.com",
+            "gsjln04hd.com",
+            "cashewsforlife208.com",
+            "phloxsub73ulata.com",
+            "xxxjmp.com"
         ),
-        domRemoveSelectors = commonAdSelectors + setOf(
+        domRemoveSelectors = commonAdSelectors + adultVideoOverlaySelectors + setOf(
             "iframe[src*='mayzaent.com']",
             "a[href*='bit.ly']",
-            "a[href*='myavlive.com']"
+            "a[href*='myavlive.com']",
+            "a[href*='trackwilltrk.com']",
+            "a[href*='rmhfrtnd.com']",
+            "a[href*='ktkjmp.com']",
+            "iframe[src*='creative.live.missav.com']"
         )
     )
 
