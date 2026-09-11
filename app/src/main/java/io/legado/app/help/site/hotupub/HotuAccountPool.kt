@@ -64,13 +64,16 @@ object HotuAccountPool {
     fun captureCurrentLogin(label: String? = null): Account? {
         val cookie = currentBrowserCookie()
         if (cookie.isBlank()) return null
-        loadAccounts().firstOrNull { existing -> cookie(existing.id) == cookie }?.let {
-            return it
+        loadAccounts().firstOrNull { existing -> cookie(existing.id) == cookie }?.let { existing ->
+            setActive(existing.id)
+            return existing
         }
-        return addAccount(
+        val account = addAccount(
             label = label?.takeIf { it.isNotBlank() } ?: nextDefaultLabel(),
             cookie = cookie
         )
+        setActive(account.id)
+        return account
     }
 
     @Synchronized
@@ -194,27 +197,11 @@ object HotuAccountPool {
     }
 
     private fun currentBrowserCookie(): String {
-        val mobile = CookieStore.getCookie(SITE_URL).trim()
+        // The App's Hotu entry and Pure source use www.hotupub.net, so a freshly logged-in www
+        // session is authoritative. Falling back to m is useful when the user logged in there.
         val web = CookieStore.getCookie(WEB_SITE_URL).trim()
-        return when {
-            mobile.isBlank() -> web
-            web.isBlank() -> mobile
-            mobile == web -> mobile
-            else -> mergeCookies(web, mobile)
-        }
-    }
-
-    private fun mergeCookies(vararg values: String): String {
-        val map = linkedMapOf<String, String>()
-        values.forEach { cookie ->
-            cookie.split(';').forEach { pair ->
-                val index = pair.indexOf('=')
-                if (index > 0) {
-                    map[pair.substring(0, index).trim()] = pair.substring(index + 1).trim()
-                }
-            }
-        }
-        return map.entries.joinToString("; ") { "${it.key}=${it.value}" }
+        if (web.isNotBlank()) return web
+        return CookieStore.getCookie(SITE_URL).trim()
     }
 
     private fun loadAccounts(): List<Account> {
