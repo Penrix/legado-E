@@ -11,6 +11,7 @@ import io.legado.app.help.config.LocalConfig
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.help.config.ThemeConfig
 import io.legado.app.help.coroutine.Coroutine
+import io.legado.app.help.site.PrivateBookSourceInstaller
 import io.legado.app.model.BookCover
 import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonArray
@@ -22,6 +23,10 @@ import java.io.File
 object DefaultData {
 
     fun upVersion() {
+        // Private built-ins are App-managed assets, not public/community imports. Keep them
+        // installed on every launch while preserving the user's enabled/order choices.
+        PrivateBookSourceInstaller.installOrUpdate()
+
         if (LocalConfig.versionCode < AppConst.appInfo.versionCode) {
             Coroutine.async {
                 if (LocalConfig.needUpHttpTTS) {
@@ -72,10 +77,11 @@ object DefaultData {
 
     val themeConfigs: List<ThemeConfig.Config> by lazy {
         val json = String(
-            appCtx.assets.open("defaultData${File.separator}${ThemeConfig.configFileName}")
+            appCtx.assets.open("defaultData${File.separator}${ReadBookConfig.configFileName}")
                 .readBytes()
         )
-        GSON.fromJsonArray<ThemeConfig.Config>(json).getOrNull() ?: emptyList()
+        GSON.fromJsonArray<ReadBookConfig.Config>(json).getOrNull()
+            ?: emptyList()
     }
 
     val rssSources: List<RssSource> by lazy {
