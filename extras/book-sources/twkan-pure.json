@@ -1,5 +1,5 @@
 {
-  "bookSourceComment": "Penrix 私人版 TWKAN Pure。基础规则参考源仓库 hans-chen 2026-08-17 的 TWKAN 书源；增加正文繁转简和保守的站内植入推广清理。仅针对公开网站 twkan.com。",
+  "bookSourceComment": "Penrix 私人版 TWKAN Pure。基础规则参考源仓库 hans-chen 2026-08-17 的 TWKAN 书源；只增加保守的站内植入推广清理。简繁转换交给 Sigma 原生阅读设置处理。仅针对公开网站 twkan.com。",
   "bookSourceGroup": "Penrix Pure",
   "bookSourceName": "TWKAN Pure",
   "bookSourceType": 0,
@@ -13,7 +13,7 @@
   "header": "{\"User-Agent\": \"Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0 Mobile Safari/537.36\", \"Referer\": \"https://twkan.com/\"}",
   "searchUrl": "/search,{\"body\":\"searchkey={{key}}&searchtype=all\",\"charset\":\"utf8\",\"method\":\"POST\"}",
   "ruleSearch": {
-    "bookList": "<js>java.t2s(result)</js>\n#article_list_content li",
+    "bookList": "#article_list_content li",
     "name": "h3@text",
     "author": ".labelbox@label.0@text",
     "bookUrl": "h3 a@href",
@@ -21,7 +21,6 @@
     "intro": "ol@text"
   },
   "ruleBookInfo": {
-    "init": "<js>java.t2s(result)</js>",
     "name": "meta[property=\"og:novel:book_name\"]@content||h1@text",
     "author": "meta[property=\"og:novel:author\"]@content",
     "intro": "meta[property=\"og:description\"]@content",
@@ -31,13 +30,13 @@
     "tocUrl": "{{baseUrl.replace(/book/, 'ajax_novels/chapterlist')}}"
   },
   "ruleToc": {
-    "chapterList": "<js>java.t2s(result)</js>\nul li a",
+    "chapterList": "ul li a",
     "chapterName": "text",
     "chapterUrl": "href"
   },
   "ruleContent": {
-    "title": "h1@text@js:java.t2s(result)",
-    "content": "<js>java.t2s(result)</js>\n#txtcontent0@html||#txtcontent@html||.txtnav@html",
+    "title": "h1@text",
+    "content": "#txtcontent0@html||#txtcontent@html||.txtnav@html",
     "nextContentUrl": "",
     "replaceRegex": "##.*[記记]住本站域名.*|.*GOOGLE\\s*搜索\\s*TWKAN.*|.*台[灣湾]小說網.*twkan\\.com.*|.*台[灣湾]小说网.*twkan\\.com.*|.*把本網(?:站)?分享到.*|.*把本网站分享到.*|.*本章完.*"
   },
