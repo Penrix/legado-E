@@ -86,6 +86,8 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
     private var isfullscreen = false
     private var wasScreenOff = false
     private var needClearHistory = true
+    @Volatile
+    private var currentPageUrl = ""
     private val saveImage = registerForActivityResult(HandleFileContract()) {
         it.uri?.let { uri ->
             ACache.get().put(imagePathKey, uri.toString())
@@ -240,12 +242,13 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
 
     @SuppressLint("SetJavaScriptEnabled")
     private fun initWebView(url: String, headerMap: HashMap<String, String>) {
+        currentPageUrl = url
         binding.progressBar.fontColor = accentColor
         currentWebView.webChromeClient = CustomWebChromeClient()
         // 添加 JavaScript 接口
         currentWebView.addJavascriptInterface(JSInterface(this), nameBasic)
-        // 私人净化桥仅存在于普通用户浏览上下文；书源/验证上下文完全绕过。
-        if (viewModel.sourceOrigin.isEmpty() && !viewModel.sourceVerificationEnable) {
+        // 仅为明确支持的普通站点页面暴露最小净化桥；验证/等待回传页面完全绕过。
+        if (PrivateSiteCleaner.shouldApply(url, viewModel.sourceVerificationEnable)) {
             currentWebView.addJavascriptInterface(
                 PrivateSiteCleaner.Bridge(),
                 PrivateSiteCleaner.JS_BRIDGE_NAME
@@ -453,6 +456,7 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
         }
 
         override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
+            currentPageUrl = url.orEmpty()
             if (needClearHistory) {
                 needClearHistory = false
                 currentWebView.clearHistory() //清除历史
@@ -465,6 +469,7 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
             super.onPageFinished(view, url)
             val cookieManager = CookieManager.getInstance()
             url?.let {
+                currentPageUrl = it
                 CookieStore.setCookie(it, cookieManager.getCookie(it))
             }
             view?.title?.let { title ->
@@ -484,9 +489,7 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
                 }
             }
 
-            val protectedSourceContext =
-                viewModel.sourceVerificationEnable || viewModel.sourceOrigin.isNotEmpty()
-            PrivateSiteCleaner.scriptFor(url, protectedSourceContext)?.let { script ->
+            PrivateSiteCleaner.scriptFor(url, viewModel.sourceVerificationEnable)?.let { script ->
                 view?.evaluateJavascript(script, null)
             }
         }
@@ -495,14 +498,12 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
             view: WebView,
             request: WebResourceRequest
         ): WebResourceResponse? {
-            val protectedSourceContext =
-                viewModel.sourceVerificationEnable || viewModel.sourceOrigin.isNotEmpty()
-            val pageUrl = view.url ?: viewModel.baseUrl
+            val pageUrl = currentPageUrl.ifBlank { viewModel.baseUrl }
             if (
                 PrivateSiteCleaner.shouldBlockRequest(
                     pageUrl,
                     request.url.toString(),
-                    protectedSourceContext
+                    viewModel.sourceVerificationEnable
                 )
             ) {
                 return WebResourceResponse(
