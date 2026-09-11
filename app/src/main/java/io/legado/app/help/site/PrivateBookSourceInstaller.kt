@@ -2,6 +2,7 @@ package io.legado.app.help.site
 
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.BookSource
+import io.legado.app.help.site.hotupub.HotuAccountPool
 import io.legado.app.help.site.hotupub.HotuAutoSignIn
 import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonObject
@@ -48,6 +49,9 @@ object PrivateBookSourceInstaller {
             appDb.bookSourceDao.insert(source)
         }
         PrivateReadingDefaults.applyToExistingBooks()
+        // Restore the user's selected Hotu account for normal www-site reading before any
+        // background account-pool requests run. Per-account sign-in itself remains isolated.
+        HotuAccountPool.applyActiveCookie()
         HotuAutoSignIn.ensureScheduled()
         HotuAutoSignIn.runDueAsync()
     }
