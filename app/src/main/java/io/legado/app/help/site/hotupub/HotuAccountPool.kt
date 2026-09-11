@@ -37,6 +37,7 @@ object HotuAccountPool {
         val id: String,
         var label: String,
         var enabled: Boolean = true,
+        var lastAttemptDate: String? = null,
         var lastSignDate: String? = null,
         var lastSignStatus: SignStatus = SignStatus.NEVER,
         var lastSignMessage: String? = null
@@ -60,6 +61,9 @@ object HotuAccountPool {
     fun captureCurrentLogin(label: String? = null): Account? {
         val cookie = CookieStore.getCookie(SITE_URL).trim()
         if (cookie.isBlank()) return null
+        loadAccounts().firstOrNull { existing -> cookie(existing.id) == cookie }?.let {
+            return it
+        }
         return addAccount(
             label = label?.takeIf { it.isNotBlank() } ?: nextDefaultLabel(),
             cookie = cookie
@@ -148,14 +152,17 @@ object HotuAccountPool {
     ) {
         val all = loadAccounts().toMutableList()
         val account = all.firstOrNull { it.id == accountId } ?: return
-        account.lastSignDate = date.toString()
+        account.lastAttemptDate = date.toString()
+        if (status == SignStatus.SUCCESS || status == SignStatus.ALREADY) {
+            account.lastSignDate = date.toString()
+        }
         account.lastSignStatus = status
         account.lastSignMessage = message
         saveAccounts(all)
     }
 
     fun isDue(account: Account, date: LocalDate = LocalDate.now()): Boolean {
-        return account.enabled && account.lastSignDate != date.toString()
+        return account.enabled && account.lastAttemptDate != date.toString()
     }
 
     @Synchronized
