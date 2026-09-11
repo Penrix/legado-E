@@ -27,6 +27,13 @@ class PrivateSiteCleanerTest {
         val url = "https://twkan.com/txt/93323/58783896"
         assertFalse(PrivateSiteCleaner.shouldApply(url, sourceVerification = true))
         assertNull(PrivateSiteCleaner.scriptFor(url, sourceVerification = true))
+        assertFalse(
+            PrivateSiteCleaner.shouldBlockRequest(
+                url,
+                "https://www.googletagmanager.com/gtm.js",
+                sourceVerification = true
+            )
+        )
     }
 
     @Test
@@ -63,12 +70,13 @@ class PrivateSiteCleanerTest {
     }
 
     @Test
-    fun `chapter pages receive pure reading script`() {
-        assertNotNull(
-            PrivateSiteCleaner.scriptFor(
-                "https://twkan.com/txt/93323/58783896",
-                sourceVerification = false
-            )
+    fun `chapter pages receive pure reading script with unicode normalization`() {
+        val script = PrivateSiteCleaner.scriptFor(
+            "https://twkan.com/txt/93323/58783896",
+            sourceVerification = false
         )
+        assertNotNull(script)
+        assertTrue(script!!.contains("normalize('NFKC')"))
+        assertTrue(script.contains("69shux"))
     }
 }
