@@ -1,5 +1,5 @@
 {
-  "bookSourceComment": "Penrix 私人版 TWKAN Pure。基础规则参考源仓库 hans-chen 2026-08-17 的 TWKAN 书源；增加保守的站内植入推广清理，并先做 NFKC 归一化以识别花体域名水印。简繁转换交给 Sigma 原生阅读设置处理。仅针对公开网站 twkan.com。",
+  "bookSourceComment": "Penrix 私人版 TWKAN Pure。基础规则参考源仓库 hans-chen 2026-08-17 的 TWKAN 书源；增加保守的站内植入推广清理。广告判断时对行副本做 NFKC 归一化以识别花体域名，但返回的正常正文保持原样。简繁转换交给 Sigma 原生阅读设置处理。仅针对公开网站 twkan.com。",
   "bookSourceGroup": "Penrix Pure",
   "bookSourceName": "TWKAN Pure",
   "bookSourceType": 0,
@@ -36,9 +36,9 @@
   },
   "ruleContent": {
     "title": "h1@text",
-    "content": "#txtcontent0@html||#txtcontent@html||.txtnav@html<js>Packages.java.text.Normalizer.normalize(String(result), Packages.java.text.Normalizer.Form.NFKC)</js>",
+    "content": "#txtcontent0@html||#txtcontent@html||.txtnav@html",
     "nextContentUrl": "",
-    "replaceRegex": "##.*[記记]住本站域名.*|.*GOOGLE\\s*搜索\\s*TWKAN.*|.*台[灣湾]小說網.*twkan\\.com.*|.*台[灣湾]小说网.*twkan\\.com.*|.*把本網(?:站)?分享到.*|.*把本网站分享到.*|(?im:^\\s*(?:www\\.)?(?:twkan|69shux)\\.com\\s*$)|.*本章完.*"
+    "replaceRegex": "<js>\nvar Normalizer = Packages.java.text.Normalizer;\nvar Form = Packages.java.text.Normalizer.Form.NFKC;\nString(result).split(/\\r?\\n/).filter(function(line) {\n  var normalized = String(Normalizer.normalize(String(line), Form)).replace(/\\s+/g, ' ').trim();\n  if (!normalized) return true;\n  if (/[記记]住本站域名/i.test(normalized)) return false;\n  if (/GOOGLE\\s*搜索\\s*TWKAN/i.test(normalized)) return false;\n  if (/把本網(?:站)?分享到/i.test(normalized) || /把本网站分享到/i.test(normalized)) return false;\n  if (/台[灣湾](?:小說網|小说网).*twkan\\.com/i.test(normalized)) return false;\n  if (/^(?:www\\.)?(?:twkan|69shux)\\.com$/i.test(normalized)) return false;\n  if (/^本章完[。.!！]?$/.test(normalized)) return false;\n  return true;\n}).join('\\n');\n</js>"
   },
   "lastUpdateTime": "1789095600000"
 }
