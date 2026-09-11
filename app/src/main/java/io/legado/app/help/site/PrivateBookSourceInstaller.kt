@@ -46,6 +46,7 @@ object PrivateBookSourceInstaller {
             }
             appDb.bookSourceDao.insert(source)
         }
+        PrivateReadingDefaults.applyToExistingBooks()
     }
 
     private fun load(assetPath: String): BookSource? {
