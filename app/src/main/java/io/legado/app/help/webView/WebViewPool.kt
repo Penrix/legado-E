@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.MutableContextWrapper
 import android.os.Build
 import android.view.ViewGroup
+import android.webkit.CookieManager
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -26,32 +27,31 @@ import kotlin.random.Random
 object WebViewPool {
     const val BLANK_HTML = "about:blank"
     const val DATA_HTML = "data:text/html;charset=utf-8;base64,"
-    // 未使用的、已预初始化的WebView池 (使用栈结构，后进先出，复用缓存)
+    // 未使用的、已预初始化的WebView池 (使用栈结构，后进先出)
     private val idlePool = Stack<PooledWebView>()
     // 正在使用的WebView集合
     private val inUsePool = mutableMapOf<String, PooledWebView>()
 
     private var needInitialize = true
-    private val CACHED_WEB_VIEW_MAX_NUM = max(AppConfig.threadCount / 10, 5) // 池子总容量（闲置+使用）
-    private const val IDLE_TIME_OUT: Long = 5 * 60 * 1000 // 闲置5分钟后销毁
-    private const val IDLE_TIME_OUT_LAST: Long = 30 * 60 * 1000 // 最后一个闲置30分钟后销毁
+    private val CACHED_WEB_VIEW_MAX_NUM = max(AppConfig.threadCount / 10, 5)
+    private const val IDLE_TIME_OUT: Long = 5 * 60 * 1000
+    private const val IDLE_TIME_OUT_LAST: Long = 30 * 60 * 1000
     private val cleanupScope by lazy { CoroutineScope(Dispatchers.IO + SupervisorJob()) }
     private var cleanupJob: Job? = null
 
-    // 获取一个WebView
     @Synchronized
     fun acquire(context: Context): PooledWebView {
         val pooledWebView = if (idlePool.isNotEmpty()) {
-            idlePool.pop() // 复用闲置实例
+            idlePool.pop()
         } else {
             if (needInitialize) {
                 needInitialize = false
                 startCleanupTimer()
             }
-            createNewWebView() // 创建新实例
+            createNewWebView()
         }
         pooledWebView.upContext(context).apply {
-            realWebView.settings.setDarkeningAllowed(AppConfig.isNightTheme) //设置是否夜间
+            realWebView.settings.setDarkeningAllowed(AppConfig.isNightTheme)
             if (inUsePool.isEmpty()) {
                 realWebView.resumeTimers()
             }
@@ -61,14 +61,12 @@ object WebViewPool {
         return pooledWebView
     }
 
-    // 释放WebView回池
     @Synchronized
     fun release(pooledWebView: PooledWebView) {
         if (inUsePool.remove(pooledWebView.id) == null) {
             pooledWebView.realWebView.destroy()
             return
         }
-        // 重置WebView状态
         pooledWebView.realWebView.run {
             (parent as? ViewGroup)?.removeView(this)
             layoutParams = ViewGroup.LayoutParams(
@@ -76,7 +74,7 @@ object WebViewPool {
                 ViewGroup.LayoutParams.MATCH_PARENT
             )
             stopLoading()
-            clearFocus() //清除焦点
+            clearFocus()
             setOnLongClickListener(null)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 setOnScrollChangeListener(null)
@@ -85,13 +83,12 @@ object WebViewPool {
             outlineProvider = null
             clipToOutline = false
             webChromeClient = null
-            clearFormData() //清除表单数据
-            clearMatches() //清除查找匹配项
-            clearDisappearingChildren() //清除消失中的子视图
-            clearAnimation() //清除动画
+            clearFormData()
+            clearMatches()
+            clearDisappearingChildren()
+            clearAnimation()
             pooledWebView.upContext(appCtx)
             if (idlePool.size >= CACHED_WEB_VIEW_MAX_NUM - inUsePool.size) {
-                // 池子已满，直接销毁
                 pooledWebView.realWebView.destroy()
                 return
             }
@@ -102,11 +99,11 @@ object WebViewPool {
                     view?.let{ webview ->
                         webview.settings.apply {
                             javaScriptEnabled = false
-                            javaScriptEnabled = true // 禁用再启用来重置js环境，注意需要禁用的订阅源需要再次执行
-                            blockNetworkImage = false // 确保允许加载网络图片
-                            cacheMode = WebSettings.LOAD_DEFAULT // 重置缓存模式
-                            useWideViewPort = false // 恢复默认关闭宽视模式
-                            loadWithOverviewMode = false // 恢复默认
+                            javaScriptEnabled = true
+                            blockNetworkImage = false
+                            cacheMode = WebSettings.LOAD_DEFAULT
+                            useWideViewPort = false
+                            loadWithOverviewMode = false
                             textZoom = 100
                         }
                         if (inUsePool.isEmpty()) {
@@ -133,7 +130,6 @@ object WebViewPool {
         return "web_${System.currentTimeMillis()}_${Random.nextLong()}"
     }
 
-    // 初始化
     @SuppressLint("SetJavaScriptEnabled")
     private fun preInitWebView(webView: WebView) {
         webView.layoutParams = ViewGroup.LayoutParams(
@@ -150,14 +146,22 @@ object WebViewPool {
             displayZoomControls = false
             textZoom = 100
         }
+        // Modern account/login flows (UAA, Hotu, Bacha, Cloudflare) may rely on cookies set by
+        // embedded auth/challenge resources. WebView defaults third-party cookies to false for
+        // modern target SDKs, so explicitly enable them for this user-facing pooled browser.
+        CookieManager.getInstance().apply {
+            setAcceptCookie(true)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                setAcceptThirdPartyCookies(webView, true)
+            }
+        }
     }
 
-    // 定时清理闲置过久的WebView
     private fun startCleanupTimer() {
         if (cleanupJob?.isActive == true) return
         cleanupJob = cleanupScope.launch {
             while (true) {
-                delay(30_000) // 每30秒执行一次清理
+                delay(30_000)
                 val now = System.currentTimeMillis()
                 val toRemove = mutableListOf<PooledWebView>()
                 var shouldCancel = false
