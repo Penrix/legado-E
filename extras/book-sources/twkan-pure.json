@@ -1,0 +1,44 @@
+{
+  "bookSourceComment": "Penrix 私人版 TWKAN Pure。基础规则参考源仓库 hans-chen 2026-08-17 的 TWKAN 书源；增加正文繁转简和保守的站内植入推广清理。仅针对公开网站 twkan.com。",
+  "bookSourceGroup": "Penrix Pure",
+  "bookSourceName": "TWKAN Pure",
+  "bookSourceType": 0,
+  "bookSourceUrl": "https://twkan.com",
+  "bookUrlPattern": "https?:\\/\\/twkan\\.com\\/book\\/\\d+\\.html",
+  "customOrder": 0,
+  "enabled": true,
+  "enabledCookieJar": true,
+  "enabledExplore": false,
+  "exploreUrl": "",
+  "header": "{\"User-Agent\": \"Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0 Mobile Safari/537.36\", \"Referer\": \"https://twkan.com/\"}",
+  "searchUrl": "/search,{\"body\":\"searchkey={{key}}&searchtype=all\",\"charset\":\"utf8\",\"method\":\"POST\"}",
+  "ruleSearch": {
+    "bookList": "#article_list_content li",
+    "name": "h3@text@js:java.t2s(result)",
+    "author": ".labelbox@label.0@text@js:java.t2s(result)",
+    "bookUrl": "h3 a@href",
+    "coverUrl": "img@data-src||img@src",
+    "intro": "ol@text@js:java.t2s(result)"
+  },
+  "ruleBookInfo": {
+    "name": "meta[property=\"og:novel:book_name\"]@content||h1@text@js:java.t2s(result)",
+    "author": "meta[property=\"og:novel:author\"]@content@js:java.t2s(result)",
+    "intro": "meta[property=\"og:description\"]@content@js:java.t2s(result)",
+    "kind": "meta[property=\"og:novel:category\"]@content,meta[property=\"og:novel:status\"]@content@js:java.t2s(result)",
+    "coverUrl": "meta[property=\"og:image\"]@content",
+    "lastChapter": "meta[property=\"og:novel:latest_chapter_name\"]@content@js:java.t2s(result)",
+    "tocUrl": "{{baseUrl.replace(/book/, 'ajax_novels/chapterlist')}}"
+  },
+  "ruleToc": {
+    "chapterList": "ul li a",
+    "chapterName": "text@js:java.t2s(result)",
+    "chapterUrl": "href"
+  },
+  "ruleContent": {
+    "title": "h1@text@js:java.t2s(result)",
+    "content": "#txtcontent0@html||#txtcontent@html||.txtnav@html@js:java.t2s(result)",
+    "nextContentUrl": "",
+    "replaceRegex": "##.*[記记]住本站域名.*|.*GOOGLE\\s*搜索\\s*TWKAN.*|.*台[灣湾]小說網.*twkan\\.com.*|.*台[灣湾]小说网.*twkan\\.com.*|.*把本網(?:站)?分享到.*|.*把本网站分享到.*|.*本章完.*"
+  },
+  "lastUpdateTime": "1789095600000"
+}
