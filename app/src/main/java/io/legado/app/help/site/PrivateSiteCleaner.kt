@@ -4,12 +4,7 @@ import android.webkit.JavascriptInterface
 import io.legado.app.utils.ChineseUtils
 import java.net.URI
 
-/**
- * Personal, user-facing WebView cleanup layer.
- *
- * Keep this deliberately separate from the book-source runtime. Source requests, Rhino,
- * java.ajax and background/source WebViews must not pass through this cleaner.
- */
+/** User-facing cleanup only. Generic BookSource runtime never passes through this cleaner. */
 object PrivateSiteCleaner {
 
     const val JS_BRIDGE_NAME = "PenrixSite"
@@ -28,7 +23,6 @@ object PrivateSiteCleaner {
         return !sourceVerification && isManagedSite(url)
     }
 
-    /** The JavaScript bridge exists only for TWKAN's traditional-to-simplified conversion. */
     fun shouldInstallBridge(url: String?, sourceVerification: Boolean): Boolean {
         return !sourceVerification && isTwkan(url)
     }
@@ -40,38 +34,40 @@ object PrivateSiteCleaner {
     ): Boolean {
         if (!shouldApply(pageUrl, sourceVerification)) return false
         val profile = PrivateSiteRegistry.profileFor(pageUrl) ?: return false
-        val requestHost = hostOf(requestUrl) ?: return false
+        return matchesBlockedHost(profile, requestUrl)
+    }
+
+    /** Block a known ad/popunder destination before WebView leaves the managed site. */
+    fun shouldBlockNavigation(
+        pageUrl: String?,
+        targetUrl: String?,
+        sourceVerification: Boolean
+    ): Boolean {
+        if (!shouldApply(pageUrl, sourceVerification)) return false
+        val profile = PrivateSiteRegistry.profileFor(pageUrl) ?: return false
+        return matchesBlockedHost(profile, targetUrl)
+    }
+
+    private fun matchesBlockedHost(profile: PrivateSiteProfile, url: String?): Boolean {
+        val host = hostOf(url) ?: return false
         return profile.blockedHostSuffixes.any { suffix ->
-            requestHost == suffix || requestHost.endsWith(".$suffix")
+            host == suffix || host.endsWith(".$suffix")
         }
     }
 
     fun scriptFor(url: String?, sourceVerification: Boolean): String? {
         if (!shouldApply(url, sourceVerification)) return null
         val profile = PrivateSiteRegistry.profileFor(url) ?: return null
-        return when {
-            isTwkanChapter(url) -> twkanChapterPureScript
-            else -> cleanupScript(profile)
-        }
+        return if (isTwkanChapter(url)) twkanChapterPureScript else cleanupScript(profile)
     }
 
     class Bridge {
-        /** Minimal bridge: no network, file, cookie, login or source access. */
         @JavascriptInterface
         fun t2s(content: String): String = ChineseUtils.t2s(content)
     }
 
     private fun hostOf(url: String?): String? = PrivateSiteRegistry.hostOf(url)
 
-    /**
-     * Build cleanup JavaScript from the selected site's own profile.
-     *
-     * Four layers are used:
-     * 1. WebView request interception blocks known third-party ad/tracker hosts before loading.
-     * 2. This script removes matching DOM nodes and site-specific ad selectors.
-     * 3. MutationObserver repeats cleanup for ads injected after page load.
-     * 4. Click/window.open guards suppress navigation to known ad hosts without blocking normal links.
-     */
     private fun cleanupScript(profile: PrivateSiteProfile): String {
         val blockedHosts = profile.blockedHostSuffixes
             .sorted()
@@ -108,24 +104,19 @@ object PrivateSiteCleaner {
                       removedRoot = true;
                       return;
                     }
-                    if (root.querySelectorAll) {
-                      root.querySelectorAll(selector).forEach(el => el.remove());
-                    }
+                    root.querySelectorAll?.(selector).forEach(el => el.remove());
                   } catch (_) {}
                 });
                 return removedRoot;
               };
 
               const clean = root => {
-                if (!root) return;
-                if (removeBySelector(root)) return;
-                if (!root.querySelectorAll) return;
+                if (!root || removeBySelector(root) || !root.querySelectorAll) return;
                 root.querySelectorAll(
-                  'iframe[src], script[src], img[src], source[src], video[poster], a[href]'
+                  'iframe[src], script[src], img[src], source[src], video[poster], a[href], form[action]'
                 ).forEach(el => {
-                  const value = el.getAttribute('src') ||
-                    el.getAttribute('href') ||
-                    el.getAttribute('poster');
+                  const value = el.getAttribute('src') || el.getAttribute('href') ||
+                    el.getAttribute('poster') || el.getAttribute('action');
                   if (blockedUrl(value)) el.remove();
                 });
               };
@@ -142,6 +133,14 @@ object PrivateSiteCleaner {
                   }
                 }, true);
 
+                document.addEventListener('submit', event => {
+                  const form = event.target;
+                  if (form && blockedUrl(form.action)) {
+                    event.preventDefault();
+                    event.stopImmediatePropagation();
+                  }
+                }, true);
+
                 const nativeOpen = window.open ? window.open.bind(window) : null;
                 if (nativeOpen && !window.__penrixNativeWindowOpen) {
                   window.__penrixNativeWindowOpen = nativeOpen;
@@ -151,13 +150,28 @@ object PrivateSiteCleaner {
                   };
                 }
 
+                try {
+                  if (!window.__penrixLocationGuard) {
+                    const nativeAssign = Location.prototype.assign;
+                    const nativeReplace = Location.prototype.replace;
+                    Location.prototype.assign = function(url) {
+                      if (blockedUrl(url)) return;
+                      return nativeAssign.call(this, url);
+                    };
+                    Location.prototype.replace = function(url) {
+                      if (blockedUrl(url)) return;
+                      return nativeReplace.call(this, url);
+                    };
+                    window.__penrixLocationGuard = true;
+                  }
+                } catch (_) {}
+
                 const observer = new MutationObserver(records => {
                   records.forEach(record => {
                     if (record.type === 'attributes') {
                       const node = record.target;
-                      const value = node.getAttribute?.('src') ||
-                        node.getAttribute?.('href') ||
-                        node.getAttribute?.('poster');
+                      const value = node.getAttribute?.('src') || node.getAttribute?.('href') ||
+                        node.getAttribute?.('poster') || node.getAttribute?.('action');
                       if (blockedUrl(value)) {
                         node.remove?.();
                         return;
@@ -167,9 +181,8 @@ object PrivateSiteCleaner {
                     }
                     record.addedNodes.forEach(node => {
                       if (node.nodeType !== Node.ELEMENT_NODE) return;
-                      const value = node.getAttribute?.('src') ||
-                        node.getAttribute?.('href') ||
-                        node.getAttribute?.('poster');
+                      const value = node.getAttribute?.('src') || node.getAttribute?.('href') ||
+                        node.getAttribute?.('poster') || node.getAttribute?.('action');
                       if (blockedUrl(value)) {
                         node.remove();
                         return;
@@ -182,7 +195,7 @@ object PrivateSiteCleaner {
                   childList: true,
                   subtree: true,
                   attributes: true,
-                  attributeFilter: ['src', 'href', 'poster']
+                  attributeFilter: ['src', 'href', 'poster', 'action']
                 });
                 window.$observerKey = observer;
               }
@@ -199,19 +212,12 @@ object PrivateSiteCleaner {
         return "\"$escaped\""
     }
 
-    /**
-     * TWKAN chapter pages have stable content containers used by current community sources:
-     * #txtcontent0, #txtcontent and .txtnav. Build a clean shell from that content instead of
-     * trying to maintain a long blacklist of every sidebar/recommendation/comment widget.
-     */
     private val twkanChapterPureScript = """
         (() => {
           if (window.__penrixTwkanPureApplied) return;
-
           const content = document.querySelector('#txtcontent0, #txtcontent, .txtnav');
           if (!content) return;
           window.__penrixTwkanPureApplied = true;
-
           content.querySelectorAll('script, iframe, ins, .adsbygoogle').forEach(el => el.remove());
 
           const promoPatterns = [
@@ -223,32 +229,19 @@ object PrivateSiteCleaner {
             /台[灣湾]小说网.*twkan\.com/i,
             /^(?:www\.)?(?:twkan|69shux)\.com$/i
           ];
-
           const normalizeText = text => {
             const raw = String(text || '');
-            try {
-              return raw.normalize('NFKC');
-            } catch (_) {
-              return raw;
-            }
+            try { return raw.normalize('NFKC'); } catch (_) { return raw; }
           };
-
           const isPromo = text => {
             const normalized = normalizeText(text).replace(/\s+/g, ' ').trim();
-            if (!normalized || normalized.length > 180) return false;
-            return promoPatterns.some(re => re.test(normalized));
+            return !!normalized && normalized.length <= 180 && promoPatterns.some(re => re.test(normalized));
           };
-
           Array.from(content.querySelectorAll('*')).reverse().forEach(el => {
-            if (el.children.length === 0 && isPromo(el.textContent)) {
-              el.remove();
-            }
+            if (el.children.length === 0 && isPromo(el.textContent)) el.remove();
           });
-
           Array.from(content.childNodes).forEach(node => {
-            if (node.nodeType === Node.TEXT_NODE && isPromo(node.textContent)) {
-              node.remove();
-            }
+            if (node.nodeType === Node.TEXT_NODE && isPromo(node.textContent)) node.remove();
           });
 
           const titleNode = document.querySelector('h1');
@@ -260,7 +253,6 @@ object PrivateSiteCleaner {
 
           const titleText = (titleNode?.textContent || document.title || '').trim();
           const cleanContent = content.cloneNode(true);
-
           const navCandidates = Array.from(document.querySelectorAll('a')).filter(a => {
             const text = (a.textContent || '').replace(/\s+/g, '').trim();
             return /^(上一章|下一章|目錄|目录)$/.test(text);
@@ -284,7 +276,6 @@ object PrivateSiteCleaner {
             #penrix-twkan-nav { display: flex; justify-content: space-between; gap: 12px; margin-top: 32px; }
             #penrix-twkan-nav a { flex: 1; text-align: center; padding: 10px 6px; text-decoration: none; }
           `;
-
           const root = document.createElement('main');
           root.id = 'penrix-twkan-pure';
           if (titleText) {
@@ -294,14 +285,12 @@ object PrivateSiteCleaner {
           }
           cleanContent.id = 'penrix-twkan-content';
           root.appendChild(cleanContent);
-
           if (navLinks.length) {
             const nav = document.createElement('nav');
             nav.id = 'penrix-twkan-nav';
             navLinks.forEach(a => nav.appendChild(a));
             root.appendChild(nav);
           }
-
           document.body.replaceChildren(root);
           document.head.appendChild(style);
           if (titleText) document.title = titleText;
