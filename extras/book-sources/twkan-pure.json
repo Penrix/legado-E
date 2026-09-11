@@ -1,10 +1,10 @@
 {
-  "bookSourceComment": "Penrix 私人版 TWKAN Pure。基础规则参考源仓库 hans-chen 2026-08-17 的 TWKAN 书源；只增加保守的站内植入推广清理。简繁转换交给 Sigma 原生阅读设置处理。仅针对公开网站 twkan.com。",
+  "bookSourceComment": "Penrix 私人版 TWKAN Pure。基础规则参考源仓库 hans-chen 2026-08-17 的 TWKAN 书源；增加保守的站内植入推广清理，并先做 NFKC 归一化以识别花体域名水印。简繁转换交给 Sigma 原生阅读设置处理。仅针对公开网站 twkan.com。",
   "bookSourceGroup": "Penrix Pure",
   "bookSourceName": "TWKAN Pure",
   "bookSourceType": 0,
   "bookSourceUrl": "https://twkan.com",
-  "bookUrlPattern": "https?:\\/\\/twkan\\.com\\/book\\/\\d+\\.html",
+  "bookUrlPattern": "https?:\\/\\/(?:www\\.)?twkan\\.com\\/book\\/\\d+\\.html",
   "customOrder": 0,
   "enabled": true,
   "enabledCookieJar": true,
@@ -36,9 +36,9 @@
   },
   "ruleContent": {
     "title": "h1@text",
-    "content": "#txtcontent0@html||#txtcontent@html||.txtnav@html",
+    "content": "#txtcontent0@html||#txtcontent@html||.txtnav@html<js>Packages.java.text.Normalizer.normalize(String(result), Packages.java.text.Normalizer.Form.NFKC)</js>",
     "nextContentUrl": "",
-    "replaceRegex": "##.*[記记]住本站域名.*|.*GOOGLE\\s*搜索\\s*TWKAN.*|.*台[灣湾]小說網.*twkan\\.com.*|.*台[灣湾]小说网.*twkan\\.com.*|.*把本網(?:站)?分享到.*|.*把本网站分享到.*|.*本章完.*"
+    "replaceRegex": "##.*[記记]住本站域名.*|.*GOOGLE\\s*搜索\\s*TWKAN.*|.*台[灣湾]小說網.*twkan\\.com.*|.*台[灣湾]小说网.*twkan\\.com.*|.*把本網(?:站)?分享到.*|.*把本网站分享到.*|(?im)^\\s*(?:www\\.)?(?:twkan|69shux)\\.com\\s*$|.*本章完.*"
   },
   "lastUpdateTime": "1789095600000"
 }
