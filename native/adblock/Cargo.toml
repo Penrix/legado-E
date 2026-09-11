@@ -1,0 +1,14 @@
+[package]
+name = "penrix_adblock"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+adblock = { version = "=0.13.3", default-features = false, features = ["embedded-domain-resolver", "full-regex-handling"] }
+jni = "0.21.1"
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.149"
