@@ -22,7 +22,8 @@ object PrivateBookSourceInstaller {
     private val assetPaths = listOf(
         "privateSites/bookSources/twkan-pure.json",
         "privateSites/bookSources/69shuba-pure.json",
-        "privateSites/bookSources/bachashuku-pure.json"
+        "privateSites/bookSources/bachashuku-pure.json",
+        "privateSites/bookSources/diyibanzhu-pure.json"
     )
 
     fun installOrUpdate() {
