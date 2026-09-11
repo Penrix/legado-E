@@ -181,6 +181,8 @@ object HotuAccountPool {
         saveAccounts(all)
     }
 
+    fun siteZone(): ZoneId = SITE_ZONE
+
     fun siteToday(): LocalDate = LocalDate.now(SITE_ZONE)
 
     fun isDue(account: Account, date: LocalDate = siteToday()): Boolean {
