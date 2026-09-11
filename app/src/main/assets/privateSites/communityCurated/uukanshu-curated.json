@@ -1,0 +1,64 @@
+{
+  "bookSourceComment": "Penrix 社区精选 · UU看书。基线参考源仓库 bennettChina 2025-11-06 可用规则；私人版增加简体关键词转繁体检索、标题/章节/正文转简，以及站内推广清理。社区基线：https://www.yckceo.com/yuedu/shuyuan/content/id/6659.html",
+  "bookSourceGroup": "Penrix 社区精选",
+  "bookSourceName": "UU看书 · 精选",
+  "bookSourceType": 0,
+  "bookSourceUrl": "https://uukanshu.cc/?penrix_curated=uukanshu",
+  "bookUrlPattern": "https?:\\/\\/(?:www\\.)?uukanshu\\.cc\\/book\\/[^?#]+",
+  "customOrder": -7900,
+  "enabled": true,
+  "enabledCookieJar": true,
+  "enabledExplore": true,
+  "header": "{\"User-Agent\":\"Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0 Mobile Safari/537.36\",\"Referer\":\"https://uukanshu.cc/\"}",
+  "searchUrl": "/search,{\"method\":\"POST\",\"body\":\"searchtype=all&searchkey={{java.s2t(key)}}&action=login&submit=\",\"headers\":{\"Content-Type\":\"application/x-www-form-urlencoded\",\"Referer\":\"https://uukanshu.cc/\"}}",
+  "ruleSearch": {
+    "bookList": "@css:.keywords > div:has(.bookinfo)",
+    "name": "@css:.bookinfo .bookname@text<js>java.t2s(String(result))</js>",
+    "author": "@css:.bookinfo div:nth-child(2) a@text<js>java.t2s(String(result))</js>",
+    "kind": "@css:.bookinfo .cat@text<js>java.t2s(String(result))</js>",
+    "lastChapter": "@css:.bookinfo .cat a@text<js>java.t2s(String(result))</js>",
+    "intro": "@css:.bookinfo .update span@text<js>java.t2s(String(result))</js>",
+    "coverUrl": "@css:.bookcover img@src",
+    "bookUrl": "@css:.bookinfo .bookname a@href",
+    "wordCount": "@css:.bookinfo div:nth-child(3)@text"
+  },
+  "ruleBookInfo": {
+    "name": "@css:.bookinfo h1@text<js>java.t2s(String(result))</js>",
+    "author": "@css:.booktag a.red@text<js>java.t2s(String(result))</js>",
+    "intro": "@css:.bookintro@textNodes##<img[^>]*><js>java.t2s(String(result))</js>",
+    "kind": "@css:.booktag@text##.*?(玄幻奇幻|武俠仙俠|現代都市|歷史軍事|科幻小說|遊戲競技|恐怖靈異|言情小說|動漫同人|其他類型).*##$1<js>java.t2s(String(result))</js>",
+    "lastChapter": "@css:.bookinfo p:nth-child(4) a@text<js>java.t2s(String(result))</js>",
+    "updateTime": "@css:.booktime@text##.*更新时间[：:]?\\s*(.*)##$1",
+    "coverUrl": "@css:.bookcover img@src",
+    "tocUrl": "",
+    "wordCount": "@css:.booktag@text##.*(\\d+)字.*##$1",
+    "status": "@css:.booktag span.red@text<js>java.t2s(String(result))</js>"
+  },
+  "ruleToc": {
+    "chapterList": "@css:#list-chapterAll dd",
+    "chapterName": "@css:a@text<js>java.t2s(String(result))</js>",
+    "chapterUrl": "@css:a@href",
+    "isVip": "@css:a@text##.*VIP.*",
+    "updateTime": "@css:span@text"
+  },
+  "ruleContent": {
+    "content": "@css:.readcotent@textNodes",
+    "nextContentUrl": "@css:#linkNext@href",
+    "title": "@css:.readtitle@text<js>java.t2s(String(result))</js>",
+    "replaceRegex": "<js>var s=String(result||'');s=s.replace(/UU看书.*?(?:uukanshu\\.cc|$)/gi,'').replace(/一秒记住〖UU看书.*?〗/gi,'').replace(/请收藏本站：.*?uukanshu\\.cc.*/gi,'').replace(/『加入书签，方便阅读』/g,'').replace(/www\\.uukanshu\\.cc/gi,'').replace(/UU看书手机版.*/gi,'').replace(/[（(]本章完[）)]/g,'');java.t2s(s);</js>"
+  },
+  "exploreUrl": "玄幻奇幻::/class_1_{{page}}.html\n武侠仙侠::/class_2_{{page}}.html\n现代都市::/class_3_{{page}}.html\n历史军事::/class_4_{{page}}.html\n科幻小说::/class_5_{{page}}.html\n游戏竞技::/class_6_{{page}}.html\n恐怖灵异::/class_7_{{page}}.html\n言情小说::/class_8_{{page}}.html\n动漫同人::/class_9_{{page}}.html\n其他类型::/class_10_{{page}}.html",
+  "ruleExplore": {
+    "bookList": "@css:#fengtui > div",
+    "name": "@css:.bookinfo h4 > a@text<js>java.t2s(String(result))</js>",
+    "author": "@css:.bookinfo div:nth-child(2)@text##作者[：:]?\\s*(.*)##$1<js>java.t2s(String(result))</js>",
+    "intro": "@css:.bookinfo div.update@text##簡介[：:]?\\s*(.*)##$1<js>java.t2s(String(result))</js>",
+    "kind": "@css:.bookinfo .cat@text<js>java.t2s(String(result))</js>",
+    "lastChapter": "@css:.bookinfo .cat > a@text<js>java.t2s(String(result))</js>",
+    "coverUrl": "@css:.bookcover img@src",
+    "bookUrl": "@css:.bookinfo h4 > a@href",
+    "wordCount": "@css:.bookinfo div:nth-child(3)@text##.*(\\d+万?字?).*##$1",
+    "updateTime": "@css:.bookinfo .time@text"
+  },
+  "lastUpdateTime": "1789095600000"
+}
