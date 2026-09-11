@@ -1,0 +1,44 @@
+{
+  "bookSourceComment": "Penrix 私人版 TWKAN Pure。基础规则参考源仓库 hans-chen 2026-08-17 的 TWKAN 书源；增加保守的站内植入推广清理。广告判断时对行副本做 NFKC 归一化以识别花体域名，但返回的正常正文不做 Unicode 归一化；净化后仅调用 Sigma 现有 java.t2s() 转为简体。仅针对公开网站 twkan.com。",
+  "bookSourceGroup": "Penrix Pure",
+  "bookSourceName": "TWKAN Pure",
+  "bookSourceType": 0,
+  "bookSourceUrl": "https://twkan.com",
+  "bookUrlPattern": "https?:\\/\\/(?:www\\.)?twkan\\.com\\/book\\/\\d+\\.html",
+  "customOrder": 0,
+  "enabled": true,
+  "enabledCookieJar": true,
+  "enabledExplore": false,
+  "exploreUrl": "",
+  "header": "{\"User-Agent\": \"Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0 Mobile Safari/537.36\", \"Referer\": \"https://twkan.com/\"}",
+  "searchUrl": "/search,{\"body\":\"searchkey={{key}}&searchtype=all\",\"charset\":\"utf8\",\"method\":\"POST\"}",
+  "ruleSearch": {
+    "bookList": "#article_list_content li",
+    "name": "h3@text",
+    "author": ".labelbox@label.0@text",
+    "bookUrl": "h3 a@href",
+    "coverUrl": "img@data-src||img@src",
+    "intro": "ol@text"
+  },
+  "ruleBookInfo": {
+    "name": "meta[property=\"og:novel:book_name\"]@content||h1@text",
+    "author": "meta[property=\"og:novel:author\"]@content",
+    "intro": "meta[property=\"og:description\"]@content",
+    "kind": "meta[property=\"og:novel:category\"]@content,meta[property=\"og:novel:status\"]@content",
+    "coverUrl": "meta[property=\"og:image\"]@content",
+    "lastChapter": "meta[property=\"og:novel:latest_chapter_name\"]@content",
+    "tocUrl": "{{baseUrl.replace(/book/, 'ajax_novels/chapterlist')}}"
+  },
+  "ruleToc": {
+    "chapterList": "ul li a",
+    "chapterName": "text<js>java.t2s(String(result))</js>",
+    "chapterUrl": "href"
+  },
+  "ruleContent": {
+    "title": "h1@text<js>java.t2s(String(result))</js>",
+    "content": "#txtcontent0@html||#txtcontent@html||.txtnav@html",
+    "nextContentUrl": "",
+    "replaceRegex": "<js>\nvar Normalizer = Packages.java.text.Normalizer;\nvar Form = Packages.java.text.Normalizer.Form.NFKC;\nvar cleaned = String(result).split(/\\r?\\n/).filter(function(line) {\n  var normalized = String(Normalizer.normalize(String(line), Form)).replace(/\\s+/g, ' ').trim();\n  if (!normalized) return true;\n  if (/[記记]住本站域名/i.test(normalized)) return false;\n  if (/GOOGLE\\s*搜索\\s*TWKAN/i.test(normalized)) return false;\n  if (/把本網(?:站)?分享到/i.test(normalized) || /把本网站分享到/i.test(normalized)) return false;\n  if (/台[灣湾](?:小說網|小说网).*twkan\\.com/i.test(normalized)) return false;\n  if (/^(?:www\\.)?(?:twkan|69shux)\\.com$/i.test(normalized)) return false;\n  if (/^本章完[。.!！]?$/.test(normalized)) return false;\n  return true;\n}).join('\\n');\njava.t2s(cleaned);\n</js>"
+  },
+  "lastUpdateTime": "1789095600000"
+}

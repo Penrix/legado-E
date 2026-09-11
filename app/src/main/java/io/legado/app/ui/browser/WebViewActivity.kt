@@ -11,25 +11,45 @@ import android.view.MenuItem
 import android.view.View
 import android.webkit.ConsoleMessage
 import android.webkit.CookieManager
+import android.webkit.JavascriptInterface
 import android.webkit.SslErrorHandler
+import android.webkit.URLUtil
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.addCallback
 import androidx.activity.viewModels
+import androidx.core.graphics.createBitmap
+import androidx.core.net.toUri
 import androidx.core.view.size
 import io.legado.app.R
 import io.legado.app.base.VMBaseActivity
 import io.legado.app.constant.AppConst
 import io.legado.app.constant.AppConst.imagePathKey
+import io.legado.app.constant.AppLog
 import io.legado.app.databinding.ActivityWebViewBinding
+import io.legado.app.exception.NoStackTraceException
+import io.legado.app.help.WebCacheManager
+import io.legado.app.help.http.CookieManager as AppCookieManager
 import io.legado.app.help.http.CookieStore
+import io.legado.app.help.site.PrivateSiteCleaner
 import io.legado.app.help.source.SourceVerificationHelp
+import io.legado.app.help.webView.PooledWebView
+import io.legado.app.help.webView.WebJsExtensions
+import io.legado.app.help.webView.WebJsExtensions.Companion.basicJs
+import io.legado.app.help.webView.WebJsExtensions.Companion.nameBasic
+import io.legado.app.help.webView.WebJsExtensions.Companion.nameCache
+import io.legado.app.help.webView.WebJsExtensions.Companion.nameJava
+import io.legado.app.help.webView.WebViewPool
+import io.legado.app.help.webView.WebViewPool.BLANK_HTML
+import io.legado.app.help.webView.WebViewPool.DATA_HTML
 import io.legado.app.lib.dialogs.SelectItem
 import io.legado.app.lib.dialogs.alert
 import io.legado.app.lib.dialogs.selector
 import io.legado.app.lib.theme.accentColor
+import io.legado.app.model.Download
 import io.legado.app.ui.association.OnLineImportActivity
 import io.legado.app.ui.file.HandleFileContract
 import io.legado.app.utils.ACache
@@ -43,27 +63,10 @@ import io.legado.app.utils.startActivity
 import io.legado.app.utils.toggleSystemBar
 import io.legado.app.utils.viewbindingdelegate.viewBinding
 import io.legado.app.utils.visible
-import android.webkit.JavascriptInterface
-import android.webkit.URLUtil
-import io.legado.app.constant.AppLog
-import io.legado.app.help.webView.WebJsExtensions
-import io.legado.app.help.webView.WebJsExtensions.Companion.basicJs
-import io.legado.app.help.webView.WebJsExtensions.Companion.nameBasic
-import io.legado.app.help.webView.WebJsExtensions.Companion.nameJava
-import io.legado.app.help.http.CookieManager as AppCookieManager
-import androidx.core.net.toUri
-import io.legado.app.exception.NoStackTraceException
-import io.legado.app.help.webView.PooledWebView
-import io.legado.app.help.webView.WebViewPool
-import io.legado.app.help.webView.WebViewPool.BLANK_HTML
-import io.legado.app.help.webView.WebViewPool.DATA_HTML
-import io.legado.app.model.Download
 import splitties.systemservices.powerManager
+import java.io.ByteArrayInputStream
 import java.lang.ref.WeakReference
 import java.net.URLDecoder
-import androidx.core.graphics.createBitmap
-import io.legado.app.help.WebCacheManager
-import io.legado.app.help.webView.WebJsExtensions.Companion.nameCache
 
 class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
     companion object {
@@ -83,6 +86,8 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
     private var isfullscreen = false
     private var wasScreenOff = false
     private var needClearHistory = true
+    @Volatile
+    private var currentPageUrl = ""
     private val saveImage = registerForActivityResult(HandleFileContract()) {
         it.uri?.let { uri ->
             ACache.get().put(imagePathKey, uri.toString())
@@ -237,10 +242,18 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
 
     @SuppressLint("SetJavaScriptEnabled")
     private fun initWebView(url: String, headerMap: HashMap<String, String>) {
+        currentPageUrl = url
         binding.progressBar.fontColor = accentColor
         currentWebView.webChromeClient = CustomWebChromeClient()
         // 添加 JavaScript 接口
         currentWebView.addJavascriptInterface(JSInterface(this), nameBasic)
+        // 仅为明确支持的普通站点页面暴露最小净化桥；验证/等待回传页面完全绕过。
+        if (PrivateSiteCleaner.shouldApply(url, viewModel.sourceVerificationEnable)) {
+            currentWebView.addJavascriptInterface(
+                PrivateSiteCleaner.Bridge(),
+                PrivateSiteCleaner.JS_BRIDGE_NAME
+            )
+        }
         currentWebView.webViewClient = CustomWebViewClient()
         currentWebView.settings.apply {
             useWideViewPort = true
@@ -443,6 +456,7 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
         }
 
         override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
+            currentPageUrl = url.orEmpty()
             if (needClearHistory) {
                 needClearHistory = false
                 currentWebView.clearHistory() //清除历史
@@ -455,6 +469,7 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
             super.onPageFinished(view, url)
             val cookieManager = CookieManager.getInstance()
             url?.let {
+                currentPageUrl = it
                 CookieStore.setCookie(it, cookieManager.getCookie(it))
             }
             view?.title?.let { title ->
@@ -473,6 +488,31 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
                     }
                 }
             }
+
+            PrivateSiteCleaner.scriptFor(url, viewModel.sourceVerificationEnable)?.let { script ->
+                view?.evaluateJavascript(script, null)
+            }
+        }
+
+        override fun shouldInterceptRequest(
+            view: WebView,
+            request: WebResourceRequest
+        ): WebResourceResponse? {
+            val pageUrl = currentPageUrl.ifBlank { viewModel.baseUrl }
+            if (
+                PrivateSiteCleaner.shouldBlockRequest(
+                    pageUrl,
+                    request.url.toString(),
+                    viewModel.sourceVerificationEnable
+                )
+            ) {
+                return WebResourceResponse(
+                    "text/plain",
+                    "utf-8",
+                    ByteArrayInputStream(ByteArray(0))
+                )
+            }
+            return super.shouldInterceptRequest(view, request)
         }
 
         private fun shouldOverrideUrlLoading(url: Uri): Boolean {
