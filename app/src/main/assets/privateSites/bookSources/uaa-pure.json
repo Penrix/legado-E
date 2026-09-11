@@ -1,0 +1,46 @@
+{
+  "bookSourceComment": "Penrix 私人版内置 UAA。用户通过 UAA 官方网页自行登录，CookieJar 复用站点正常签发的登录态；不保存账号密码，不绕过会员/U币权限。搜索使用 UAA 官方小说 API，正文进入 Sigma 原生阅读与朗读。",
+  "bookSourceGroup": "Penrix 内置",
+  "bookSourceName": "UAA Pure",
+  "bookSourceType": 0,
+  "bookSourceUrl": "https://www.uaa.com/api/novel/app/novel/?penrix_builtin=uaa",
+  "bookUrlPattern": "https?:\\/\\/(?:www\\.)?uaa\\.com\\/novel\\/intro\\?id=\\d+",
+  "customOrder": -8960,
+  "enabled": true,
+  "enabledCookieJar": true,
+  "enabledExplore": false,
+  "loginUrl": "https://www.uaa.com/",
+  "header": "<js>(function(){var ua='';try{ua=String(java.getWebViewUA()||'');}catch(e){}if(ua.indexOf('Mozilla')!==0)ua='Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0 Mobile Safari/537.36';return JSON.stringify({'User-Agent':ua,'Referer':'https://www.uaa.com/','Accept-Language':'zh-CN,zh;q=0.9'});})()</js>",
+  "searchUrl": "search?keyword={{java.encodeURI(key)}}&page={{page}}&size=40",
+  "ruleSearch": {
+    "bookList": "model.data",
+    "name": "title",
+    "author": "authors",
+    "bookUrl": "/novel/intro?id={{$.id}}",
+    "coverUrl": "coverUrl",
+    "intro": "brief",
+    "kind": "{{result.finished == 1 ? '完结' : '连载'}} {{$.pornRateDesc##\\((.*)\\)##$1###}} {{$.categories}}",
+    "lastChapter": "latestUpdate",
+    "wordCount": "wordCount"
+  },
+  "ruleBookInfo": {
+    "name": ".info_box@h1@text",
+    "author": ".info_box@a.0@text",
+    "intro": ".brief@text",
+    "kind": ".tag_box@a@text,.props_box@ul@li.0@text",
+    "coverUrl": ".cover_box@img@src||.book_cover@img@src",
+    "lastChapter": ".catalog_ul@li.-1@a@ownText||.volume@ul@li.-1@a@ownText"
+  },
+  "ruleToc": {
+    "chapterList": ".volume@ul li||.catalog_ul@li",
+    "chapterName": "a@ownText",
+    "chapterUrl": "a@href",
+    "isVip": "<js>var span=result.select('span'); /U币/.test(span.text());</js>",
+    "updateTime": "span@text##new"
+  },
+  "ruleContent": {
+    "content": ".line@html##.*</?div.*",
+    "replaceRegex": "##请登录后继续阅读.*|本章为VIP章节.*|UAA.{0,10}(?:最新地址|官方地址|备用网址).*"
+  },
+  "lastUpdateTime": "1789095600000"
+}
