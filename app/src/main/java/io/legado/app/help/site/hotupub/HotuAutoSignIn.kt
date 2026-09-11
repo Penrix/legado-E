@@ -10,7 +10,7 @@ import android.content.Intent
 import android.os.Handler
 import android.os.Looper
 import splitties.init.appCtx
-import java.util.Calendar
+import java.time.ZonedDateTime
 import java.util.concurrent.Executors
 
 object HotuAutoSignIn {
@@ -18,26 +18,30 @@ object HotuAutoSignIn {
     const val ACTION_DAILY_SIGN = "io.legado.app.action.PENRIX_HOTU_DAILY_SIGN"
     private const val ALARM_REQUEST_CODE = 69081
     private const val JOB_ID = 69082
+    private const val SIGN_HOUR = 8
+    private const val SIGN_MINUTE = 30
 
     data class AccountResult(
         val account: HotuAccountPool.Account,
         val result: HotuSignInClient.Result
     )
 
-    /** Daily trigger. The alarm never performs network work itself. */
+    /**
+     * Daily trigger at 08:30 in Hotu's own timezone. Device timezone/VPN location must not shift
+     * the sign-in day boundary. The alarm never performs network work itself.
+     */
     fun ensureScheduled(context: Context = appCtx) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         val pendingIntent = pendingIntent(context)
-        val next = Calendar.getInstance().apply {
-            set(Calendar.HOUR_OF_DAY, 8)
-            set(Calendar.MINUTE, 30)
-            set(Calendar.SECOND, 0)
-            set(Calendar.MILLISECOND, 0)
-            if (timeInMillis <= System.currentTimeMillis()) add(Calendar.DAY_OF_YEAR, 1)
-        }
+        val now = ZonedDateTime.now(HotuAccountPool.siteZone())
+        var next = now.toLocalDate()
+            .atTime(SIGN_HOUR, SIGN_MINUTE)
+            .atZone(HotuAccountPool.siteZone())
+        if (!next.isAfter(now)) next = next.plusDays(1)
+
         alarmManager.setInexactRepeating(
             AlarmManager.RTC_WAKEUP,
-            next.timeInMillis,
+            next.toInstant().toEpochMilli(),
             AlarmManager.INTERVAL_DAY,
             pendingIntent
         )
