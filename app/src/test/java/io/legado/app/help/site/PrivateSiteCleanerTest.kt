@@ -1,7 +1,6 @@
 package io.legado.app.help.site
 
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -71,12 +70,13 @@ class PrivateSiteCleanerTest {
 
     @Test
     fun `chapter pages receive pure reading script with unicode normalization`() {
-        val script = PrivateSiteCleaner.scriptFor(
-            "https://twkan.com/txt/93323/58783896",
-            sourceVerification = false
+        val script = requireNotNull(
+            PrivateSiteCleaner.scriptFor(
+                "https://twkan.com/txt/93323/58783896",
+                sourceVerification = false
+            )
         )
-        assertNotNull(script)
-        assertTrue(script!!.contains("normalize('NFKC')"))
+        assertTrue(script.contains("normalize('NFKC')"))
         assertTrue(script.contains("69shux"))
     }
 }
