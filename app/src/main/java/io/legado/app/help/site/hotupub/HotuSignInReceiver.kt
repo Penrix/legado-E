@@ -11,17 +11,11 @@ class HotuSignInReceiver : BroadcastReceiver() {
             Intent.ACTION_BOOT_COMPLETED,
             Intent.ACTION_MY_PACKAGE_REPLACED -> {
                 HotuAutoSignIn.ensureScheduled(context)
-                val pending = goAsync()
-                HotuAutoSignIn.runDueAsync {
-                    pending.finish()
-                }
+                HotuAutoSignIn.scheduleDueJob(context)
             }
 
             HotuAutoSignIn.ACTION_DAILY_SIGN -> {
-                val pending = goAsync()
-                HotuAutoSignIn.runDueAsync {
-                    pending.finish()
-                }
+                HotuAutoSignIn.scheduleDueJob(context)
             }
         }
     }
