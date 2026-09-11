@@ -1,0 +1,56 @@
+{
+  "bookSourceComment": "Penrix 私人版内置河图文化。搜索使用站点 /book/search/{key}；通过官网网页登录后复用 CookieJar。只读取账号正常有权访问的章节，不绕过点数、购买或会员权限；正文进入 Sigma 原生阅读和朗读，并清理页面推广。",
+  "bookSourceGroup": "Penrix 内置",
+  "bookSourceName": "河图文化 Pure",
+  "bookSourceType": 0,
+  "bookSourceUrl": "https://www.hotupub.net/?penrix_builtin=hotupub",
+  "bookUrlPattern": "https?:\\/\\/(?:www\\.)?hotupub\\.net\\/book\\/\\d+\\/?$",
+  "customOrder": -8920,
+  "enabled": true,
+  "enabledCookieJar": true,
+  "enabledExplore": true,
+  "loginUrl": "https://www.hotupub.net/Login/Index",
+  "header": "{\"User-Agent\":\"Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0 Mobile Safari/537.36\",\"Referer\":\"https://www.hotupub.net/\",\"Accept-Language\":\"zh-CN,zh;q=0.9\"}",
+  "searchUrl": "https://www.hotupub.net/book/search/{{java.encodeURI(key)}}",
+  "exploreUrl": "全部::https://www.hotupub.net/book/?page={{page}}&rows=10&isvip=-1&cate=0&words=0&state=-1\n免费::https://www.hotupub.net/book/?page={{page}}&rows=10&isvip=0&cate=0&words=0&state=-1\n完结::https://www.hotupub.net/book/?page={{page}}&rows=10&isvip=-1&cate=0&words=0&state=9\n武侠仙侠::https://www.hotupub.net/book/?page={{page}}&rows=10&isvip=-1&cate=3&words=0&state=-1\n架空历史::https://www.hotupub.net/book/?page={{page}}&rows=10&isvip=-1&cate=6&words=0&state=-1\n都市乡村::https://www.hotupub.net/book/?page={{page}}&rows=10&isvip=-1&cate=8&words=0&state=-1\n玄幻奇幻::https://www.hotupub.net/book/?page={{page}}&rows=10&isvip=-1&cate=9&words=0&state=-1\n绿帽红杏::https://www.hotupub.net/book/?page={{page}}&rows=10&isvip=-1&cate=10&words=0&state=-1\n黑暗调教::https://www.hotupub.net/book/?page={{page}}&rows=10&isvip=-1&cate=11&words=0&state=-1\n伦理后宫::https://www.hotupub.net/book/?page={{page}}&rows=10&isvip=-1&cate=12&words=0&state=-1\n青春校园::https://www.hotupub.net/book/?page={{page}}&rows=10&isvip=-1&cate=13&words=0&state=-1",
+  "ruleSearch": {
+    "bookList": "class.search-main-itembox@tag.li",
+    "name": "class.search-bookinfo@tag.a.0@text",
+    "author": "class.search-authname@text",
+    "bookUrl": "tag.a.0@href",
+    "coverUrl": "tag.img.0@src",
+    "intro": "class.search-bookintro@text",
+    "kind": "class.search-auth@tag.a.1@text",
+    "lastChapter": "class.search-newupdate@text",
+    "wordCount": "class.search-auth@tag.a.2@text"
+  },
+  "ruleExplore": {
+    "bookList": "class.bookstack-ullist-itembox",
+    "name": "class.bookstack-ullist-booktitle@text",
+    "author": "class.bookstack-ullist-auicon@text",
+    "bookUrl": "tag.a.0@href",
+    "coverUrl": "tag.img.0@src",
+    "intro": "class.bookstack-ulist-bookintro@text",
+    "kind": "class.bookstack-ullist-bookabout@tag.a.0@text",
+    "lastChapter": "class.bookstack-ullist-bookstate@text",
+    "wordCount": "class.bookstack-ullist-bookabout@tag.a.2@text"
+  },
+  "ruleBookInfo": {
+    "name": "tag.h1@text",
+    "author": "class.bookdetalis-bookinfo-bookname@text||class.bookdetalis-bookinfo-auicon@text",
+    "intro": "class.bookdetalis-bookinfo-bookintro@text",
+    "kind": "class.bookdetalis-bookinfo-someinfo@tag.a.0@text",
+    "wordCount": "class.bookdetalis-bookinfo-someinfo@tag.a.2@text",
+    "coverUrl": "class.bookdetalis-cover@tag.img@src||tag.img@src"
+  },
+  "ruleToc": {
+    "chapterList": "class.bookdetails-catalog-list@tag.li",
+    "chapterName": "tag.a@text",
+    "chapterUrl": "tag.a@href"
+  },
+  "ruleContent": {
+    "content": "class.bookread-content-box@html",
+    "replaceRegex": "##(?:手机阅读|掃碼前往|扫码前往|河圖文化.*(?:官方|地址)|请收藏本站|請收藏本站|本章完).*$"
+  },
+  "lastUpdateTime": "1789095600000"
+}
