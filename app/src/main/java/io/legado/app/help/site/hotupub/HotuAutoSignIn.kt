@@ -2,6 +2,9 @@ package io.legado.app.help.site.hotupub
 
 import android.app.AlarmManager
 import android.app.PendingIntent
+import android.app.job.JobInfo
+import android.app.job.JobScheduler
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.os.Handler
@@ -13,13 +16,15 @@ import java.util.concurrent.Executors
 object HotuAutoSignIn {
 
     const val ACTION_DAILY_SIGN = "io.legado.app.action.PENRIX_HOTU_DAILY_SIGN"
-    private const val REQUEST_CODE = 69081
+    private const val ALARM_REQUEST_CODE = 69081
+    private const val JOB_ID = 69082
 
     data class AccountResult(
         val account: HotuAccountPool.Account,
         val result: HotuSignInClient.Result
     )
 
+    /** Daily trigger. The alarm never performs network work itself. */
     fun ensureScheduled(context: Context = appCtx) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         val pendingIntent = pendingIntent(context)
@@ -38,6 +43,23 @@ object HotuAutoSignIn {
         )
     }
 
+    /**
+     * Hand scheduled/background execution to JobScheduler so multi-account requests are not bound
+     * by BroadcastReceiver's short execution window. Network connectivity is required.
+     */
+    fun scheduleDueJob(context: Context = appCtx) {
+        val scheduler = context.getSystemService(Context.JOB_SCHEDULER_SERVICE) as JobScheduler
+        val job = JobInfo.Builder(
+            JOB_ID,
+            ComponentName(context, HotuSignInJobService::class.java)
+        )
+            .setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY)
+            .setMinimumLatency(0L)
+            .build()
+        scheduler.schedule(job)
+    }
+
+    /** Used while the App is already alive, including manual UI actions and startup catch-up. */
     fun runDueAsync(
         force: Boolean = false,
         onFinished: ((List<AccountResult>) -> Unit)? = null
@@ -89,7 +111,7 @@ object HotuAutoSignIn {
         }
         return PendingIntent.getBroadcast(
             context,
-            REQUEST_CODE,
+            ALARM_REQUEST_CODE,
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
