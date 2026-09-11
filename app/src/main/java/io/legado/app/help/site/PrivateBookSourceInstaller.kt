@@ -28,7 +28,8 @@ object PrivateBookSourceInstaller {
         "privateSites/bookSources/uaa-pure.json",
         "privateSites/bookSources/uukanshu-pure.json",
         "privateSites/bookSources/quanben-io-pure.json",
-        "privateSites/bookSources/cool18-pure.json"
+        "privateSites/bookSources/cool18-pure.json",
+        "privateSites/bookSources/hotupub-pure.json"
     )
 
     fun installOrUpdate() {
