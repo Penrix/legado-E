@@ -1,0 +1,46 @@
+{
+  "bookSourceComment": "Penrix 私人版内置八叉书库。站点身份为 bachashuku，当前内容入口使用 bachashuku.org；8xsk.org 仅作为发布页。站点当前要求登录后阅读章节，因此启用 CookieJar，并提供网页登录入口；不绕过账号或站点权限。",
+  "bookSourceGroup": "Penrix 内置",
+  "bookSourceName": "八叉书库 Pure",
+  "bookSourceType": 0,
+  "bookSourceUrl": "https://www.bachashuku.org/?penrix_builtin=bachashuku",
+  "bookUrlPattern": "https?:\\/\\/(?:www\\.)?bachashuku\\.(?:org|com)\\/book\\/\\d+(?:_\\d+)?\\.html",
+  "customOrder": -8980,
+  "enabled": true,
+  "enabledCookieJar": true,
+  "enabledExplore": false,
+  "loginUrl": "https://www.bachashuku.org/",
+  "header": "<js>(function(){var ua='';try{ua=String(java.getWebViewUA()||'');}catch(e){}if(ua.indexOf('Mozilla')!==0)ua='Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0 Mobile Safari/537.36';return JSON.stringify({'User-Agent':ua,'Referer':'https://www.bachashuku.org/','Accept-Language':'zh-CN,zh;q=0.9'});})()</js>",
+  "searchUrl": "/modules/article/search.php?searchtype=all&searchkey={{java.encodeURI(key)}}&act=search&submit=",
+  "ruleSearch": {
+    "bookList": "id.jieqi_page_contents@.c_row||id.hism",
+    "name": ".c_subject@tag.a@text||h3@text",
+    "author": ".c_value.0@text||class.vam mr10.1@text",
+    "kind": ".c_value.1@text||class.vam mr10.0@text",
+    "lastChapter": ".c_tag.1@tag.span.1@text||class.vam@tag.a@text",
+    "intro": ".c_description@text||class.fs16 mb10 c_strong g_ells@text",
+    "coverUrl": ".fl@tag.img@src||id.hism@tag.a@tag.img@_src",
+    "bookUrl": ".c_subject@tag.a@href||h3 a@href",
+    "wordCount": ".c_value.2@text"
+  },
+  "ruleBookInfo": {
+    "name": ".divbox@tag.span.0@text||h1.1@text",
+    "author": ".divbox@tag.span.1@text||class.mr15 ttl@tag.span@text",
+    "kind": ".tabvalue.1@.hide@tag.td.0@text##作品分类：||class.mr15 ttc@tag.span@text",
+    "wordCount": ".tabvalue.1@.hide@tag.td.6@text##全文数：||class.mr15 ttc hisp.1@tag.span@text##字",
+    "intro": ".tabvalue.0@text||class.h112 mb15 det-abt lh1d8 c_strong fs16 hm-scroll@text",
+    "coverUrl": ".divbox@tag.img@src",
+    "tocUrl": "<js>\n(function(){\n  var m=String(baseUrl||'').match(/\\/(?:book\\/)?(\\d+)(?:_\\d+)?\\.html|\\/(\\d+)\\/?$/);\n  var id=m?(m[1]||m[2]):'';\n  return id ? source.bookSourceUrl.replace(/\\?.*$/,'')+'read/'+id+'.html' : baseUrl;\n})()\n</js>"
+  },
+  "ruleToc": {
+    "chapterList": ".index@tag.dd||id.chapterList@tag.li",
+    "chapterName": "tag.a@text||span@text",
+    "chapterUrl": "tag.a@href||a@href",
+    "nextTocUrl": "text.下一页@href"
+  },
+  "ruleContent": {
+    "content": "id.YiJianZhan@html||id.acontent@html||id.TextContent@html",
+    "replaceRegex": "##手机看书请访问：?https?://[^\\s<]+.*|八叉书库.*(?:发布页|最新地址).*|请记住本站.*|本章未完.*点击下一页继续阅读"
+  },
+  "lastUpdateTime": "1789095600000"
+}
