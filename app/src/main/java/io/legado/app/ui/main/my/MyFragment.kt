@@ -202,7 +202,8 @@ class MyFragment() : BaseFragment(R.layout.fragment_my_config), MainFragmentInte
             val accounts = HotuAccountPool.accounts()
             val activeId = HotuAccountPool.activeAccount()?.id
             val labels = arrayListOf(
-                "保存当前河图登录为新账号",
+                "打开河图登录页",
+                "保存当前河图登录为账号",
                 "立即签到全部账号"
             )
             accounts.forEach { account ->
@@ -221,15 +222,23 @@ class MyFragment() : BaseFragment(R.layout.fragment_my_config), MainFragmentInte
             context?.selector(labels) { _, index ->
                 when (index) {
                     0 -> {
-                        val saved = HotuAccountPool.captureCurrentLogin()
-                        if (saved == null) {
-                            toast("当前没有可保存的河图登录态，请先在私人站点里登录河图")
-                        } else {
-                            toast("已保存 ${saved.label}")
+                        startActivity<WebViewActivity> {
+                            putExtra("url", "https://www.hotupub.net/Login/Index")
+                            putExtra("title", "河图账号登录")
+                            putExtra("sourceName", "登录完成后返回账号池并保存当前登录")
                         }
                     }
 
                     1 -> {
+                        val saved = HotuAccountPool.captureCurrentLogin()
+                        if (saved == null) {
+                            toast("当前没有可保存的河图登录态，请先打开登录页完成登录")
+                        } else {
+                            toast("已保存并切换到 ${saved.label}")
+                        }
+                    }
+
+                    2 -> {
                         toast("开始签到 ${accounts.size} 个河图账号")
                         HotuAutoSignIn.runDueAsync(force = true) { results ->
                             val success = results.count {
@@ -240,7 +249,7 @@ class MyFragment() : BaseFragment(R.layout.fragment_my_config), MainFragmentInte
                         }
                     }
 
-                    else -> manageHotuAccount(accounts[index - 2])
+                    else -> manageHotuAccount(accounts[index - 3])
                 }
             }
         }
