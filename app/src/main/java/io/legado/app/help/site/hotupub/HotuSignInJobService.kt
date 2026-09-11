@@ -11,16 +11,17 @@ import android.app.job.JobService
  */
 class HotuSignInJobService : JobService() {
 
-    override fun onStartJob(params: JobParameters?): Boolean {
+    override fun onStartJob(params: JobParameters): Boolean {
         HotuAutoSignIn.runDueAsync {
             jobFinished(params, false)
         }
         return true
     }
 
-    override fun onStopJob(params: JobParameters?): Boolean {
-        // Account attempts are idempotent per Hotu site day. Ask JobScheduler to retry when the
-        // system interrupts the job before our callback completes.
-        return true
+    override fun onStopJob(params: JobParameters): Boolean {
+        // The executor cannot safely cancel an in-flight HTTP request here. Returning false avoids
+        // creating a duplicate job while that request may still finish. Startup catch-up and the
+        // next daily trigger will retry accounts whose site-day attempt was not recorded.
+        return false
     }
 }
