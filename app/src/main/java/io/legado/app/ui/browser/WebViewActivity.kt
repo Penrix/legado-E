@@ -70,7 +70,6 @@ import java.net.URLDecoder
 
 class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
     companion object {
-        // 是否输出日志
         var sessionShowWebLog = false
     }
 
@@ -128,11 +127,11 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
         }
         currentWebView.clearHistory()
         onBackPressedDispatcher.addCallback(this) {
-            if (binding.customWebView.size > 0) { //网页全屏
+            if (binding.customWebView.size > 0) {
                 customWebViewCallback?.onCustomViewHidden()
                 return@addCallback
             }
-            if (isFullScreen) { //按钮全屏
+            if (isFullScreen) {
                 toggleFullScreen()
                 return@addCallback
             }
@@ -229,7 +228,6 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
         return super.onCompatOptionsItemSelected(item)
     }
 
-    //实现starBrowser调起页面全屏
     private fun toggleFullScreen() {
         isFullScreen = !isFullScreen
         toggleSystemBar(!isFullScreen)
@@ -245,9 +243,7 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
         currentPageUrl = url
         binding.progressBar.fontColor = accentColor
         currentWebView.webChromeClient = CustomWebChromeClient()
-        // 添加 JavaScript 接口
         currentWebView.addJavascriptInterface(JSInterface(this), nameBasic)
-        // 只有 TWKAN 的普通用户页需要这个最小桥；验证页和其它站点不注入。
         if (PrivateSiteCleaner.shouldInstallBridge(url, viewModel.sourceVerificationEnable)) {
             currentWebView.addJavascriptInterface(
                 PrivateSiteCleaner.Bridge(),
@@ -366,9 +362,9 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
                     ctx.requestedOrientation = when (orientation) {
                         "portrait", "portrait-primary" -> ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
                         "portrait-secondary" -> ActivityInfo.SCREEN_ORIENTATION_REVERSE_PORTRAIT
-                        "landscape" -> ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE //横屏且受重力控制正反
-                        "landscape-primary" -> ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE //正向横屏
-                        "landscape-secondary" -> ActivityInfo.SCREEN_ORIENTATION_REVERSE_LANDSCAPE //反向横屏
+                        "landscape" -> ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+                        "landscape-primary" -> ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+                        "landscape-secondary" -> ActivityInfo.SCREEN_ORIENTATION_REVERSE_LANDSCAPE
                         "any", "unspecified" -> ActivityInfo.SCREEN_ORIENTATION_SENSOR
                         else -> ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
                     }
@@ -416,12 +412,10 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
             toggleSystemBar(true)
         }
 
-        /* 覆盖window.close() */
         override fun onCloseWindow(window: WebView?) {
             close()
         }
 
-        /* 监听网页日志 */
         override fun onConsoleMessage(consoleMessage: ConsoleMessage): Boolean {
             viewModel.source?.let { source ->
                 if (sessionShowWebLog) {
@@ -434,7 +428,6 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
             }
             return false
         }
-        
     }
 
     inner class CustomWebViewClient : WebViewClient() {
@@ -457,15 +450,27 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
         }
 
         override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
+            val previousUrl = currentPageUrl.ifBlank { viewModel.baseUrl }
+            if (
+                PrivateSiteCleaner.shouldBlockNavigation(
+                    previousUrl,
+                    url,
+                    viewModel.sourceVerificationEnable
+                )
+            ) {
+                view?.stopLoading()
+                if (view?.canGoBack() == true) view.goBack()
+                return
+            }
             currentPageUrl = url.orEmpty()
             if (needClearHistory) {
                 needClearHistory = false
-                currentWebView.clearHistory() //清除历史
+                currentWebView.clearHistory()
             }
             super.onPageStarted(view, url, favicon)
             currentWebView.evaluateJavascript(basicJs, null)
         }
-        
+
         override fun onPageFinished(view: WebView?, url: String?) {
             super.onPageFinished(view, url)
             val cookieManager = CookieManager.getInstance()
@@ -517,6 +522,16 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
         }
 
         private fun shouldOverrideUrlLoading(url: Uri): Boolean {
+            val pageUrl = currentPageUrl.ifBlank { viewModel.baseUrl }
+            if (
+                PrivateSiteCleaner.shouldBlockNavigation(
+                    pageUrl,
+                    url.toString(),
+                    viewModel.sourceVerificationEnable
+                )
+            ) {
+                return true
+            }
             return when (url.scheme) {
                 "http", "https" -> false
                 "legado", "yuedu" -> {
@@ -543,7 +558,5 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
         ) {
             handler?.proceed()
         }
-
     }
-
 }
