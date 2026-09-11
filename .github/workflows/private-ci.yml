@@ -32,6 +32,39 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v5
 
+      - name: Validate managed book-source JSON
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          root = Path('app/src/main/assets/privateSites/bookSources')
+          files = sorted(root.glob('*.json'))
+          if not files:
+              raise SystemExit('No managed book-source JSON files found')
+
+          seen_urls = set()
+          for path in files:
+              with path.open('r', encoding='utf-8') as fh:
+                  data = json.load(fh)
+
+              for key in ('bookSourceName', 'bookSourceUrl', 'bookSourceGroup', 'ruleSearch', 'ruleContent'):
+                  if key not in data:
+                      raise SystemExit(f'{path}: missing required key {key}')
+
+              if 'Penrix 内置' not in [part.strip() for part in str(data['bookSourceGroup']).split(',')]:
+                  raise SystemExit(f'{path}: missing managed group')
+
+              url = str(data['bookSourceUrl'])
+              if 'penrix_builtin=' not in url:
+                  raise SystemExit(f'{path}: missing managed key marker')
+              if url in seen_urls:
+                  raise SystemExit(f'{path}: duplicate bookSourceUrl {url}')
+              seen_urls.add(url)
+
+          print(f'Validated {len(files)} managed book-source JSON files')
+          PY
+
       - name: Unit tests and debug build
         run: |
           chmod +x gradlew
