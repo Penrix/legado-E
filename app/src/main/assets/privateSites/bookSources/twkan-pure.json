@@ -1,0 +1,44 @@
+{
+  "bookSourceComment": "Penrix 私人版内置 TWKAN Pure。由 App 管理，和用户自行导入的社区书源分离。搜索关键字先转繁体以匹配 TWKAN 的主要索引；正文广告判断仅对行副本做 NFKC 归一化，正常正文不做 Unicode 归一化；净化后调用 Sigma 现有 java.t2s() 输出简体。",
+  "bookSourceGroup": "Penrix 内置",
+  "bookSourceName": "TWKAN Pure",
+  "bookSourceType": 0,
+  "bookSourceUrl": "https://twkan.com/?penrix_builtin=twkan",
+  "bookUrlPattern": "https?:\\/\\/(?:www\\.)?twkan\\.com\\/book\\/\\d+\\.html",
+  "customOrder": -9000,
+  "enabled": true,
+  "enabledCookieJar": true,
+  "enabledExplore": false,
+  "exploreUrl": "",
+  "header": "{\"User-Agent\": \"Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0 Mobile Safari/537.36\", \"Referer\": \"https://twkan.com/\"}",
+  "searchUrl": "/search,{\"body\":\"searchkey={{java.s2t(key)}}&searchtype=all\",\"charset\":\"utf8\",\"method\":\"POST\"}",
+  "ruleSearch": {
+    "bookList": "#article_list_content li",
+    "name": "h3@text<js>java.t2s(String(result))</js>",
+    "author": ".labelbox@label.0@text<js>java.t2s(String(result))</js>",
+    "bookUrl": "h3 a@href",
+    "coverUrl": "img@data-src||img@src",
+    "intro": "ol@text<js>java.t2s(String(result))</js>"
+  },
+  "ruleBookInfo": {
+    "name": "meta[property=\"og:novel:book_name\"]@content||h1@text<js>java.t2s(String(result))</js>",
+    "author": "meta[property=\"og:novel:author\"]@content<js>java.t2s(String(result))</js>",
+    "intro": "meta[property=\"og:description\"]@content<js>java.t2s(String(result))</js>",
+    "kind": "meta[property=\"og:novel:category\"]@content,meta[property=\"og:novel:status\"]@content<js>java.t2s(String(result))</js>",
+    "coverUrl": "meta[property=\"og:image\"]@content",
+    "lastChapter": "meta[property=\"og:novel:latest_chapter_name\"]@content<js>java.t2s(String(result))</js>",
+    "tocUrl": "{{baseUrl.replace(/book/, 'ajax_novels/chapterlist')}}"
+  },
+  "ruleToc": {
+    "chapterList": "ul li a",
+    "chapterName": "text<js>java.t2s(String(result))</js>",
+    "chapterUrl": "href"
+  },
+  "ruleContent": {
+    "title": "h1@text<js>java.t2s(String(result))</js>",
+    "content": "#txtcontent0@html||#txtcontent@html||.txtnav@html",
+    "nextContentUrl": "",
+    "replaceRegex": "<js>\nvar Normalizer = Packages.java.text.Normalizer;\nvar Form = Packages.java.text.Normalizer.Form.NFKC;\nvar cleaned = String(result).split(/\\r?\\n/).filter(function(line) {\n  var normalized = String(Normalizer.normalize(String(line), Form)).replace(/\\s+/g, ' ').trim();\n  if (!normalized) return true;\n  if (/[記记]住本站域名/i.test(normalized)) return false;\n  if (/GOOGLE\\s*搜索\\s*TWKAN/i.test(normalized)) return false;\n  if (/把本網(?:站)?分享到/i.test(normalized) || /把本网站分享到/i.test(normalized)) return false;\n  if (/台[灣湾](?:小說網|小说网).*twkan\\.com/i.test(normalized)) return false;\n  if (/^(?:www\\.)?(?:twkan|69shux)\\.com$/i.test(normalized)) return false;\n  if (/^本章完[。.!！]?$/.test(normalized)) return false;\n  return true;\n}).join('\\n');\njava.t2s(cleaned);\n</js>"
+  },
+  "lastUpdateTime": "1789095600000"
+}
