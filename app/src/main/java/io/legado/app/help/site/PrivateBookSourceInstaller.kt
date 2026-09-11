@@ -2,6 +2,7 @@ package io.legado.app.help.site
 
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.BookSource
+import io.legado.app.help.site.hotupub.HotuAutoSignIn
 import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonObject
 import splitties.init.appCtx
@@ -47,6 +48,8 @@ object PrivateBookSourceInstaller {
             appDb.bookSourceDao.insert(source)
         }
         PrivateReadingDefaults.applyToExistingBooks()
+        HotuAutoSignIn.ensureScheduled()
+        HotuAutoSignIn.runDueAsync()
     }
 
     private fun load(assetPath: String): BookSource? {
