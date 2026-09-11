@@ -46,7 +46,13 @@ class HotuSignInClient(
             return Result(HotuAccountPool.SignStatus.EXPIRED, "登录态已失效", cookie)
         }
         if (!HotuSignInParser.hasTodayButton(first.body)) {
-            return Result(HotuAccountPool.SignStatus.ALREADY, "今日已签到或签到按钮不可见", cookie)
+            // A missing button is not proof that the account already signed in today. The site may
+            // simply have changed its markup. Do not create a false-success record.
+            return Result(
+                HotuAccountPool.SignStatus.UNSUPPORTED,
+                "未检测到今日签到按钮，无法确认是已签到还是页面结构已变化",
+                cookie
+            )
         }
 
         val action = HotuSignInParser.resolveAction(first.body, first.finalUrl)
@@ -70,6 +76,8 @@ class HotuSignInClient(
         return if (HotuSignInParser.hasTodayButton(verify.body)) {
             Result(HotuAccountPool.SignStatus.FAILED, "签到动作已执行，但页面仍显示今日签到按钮", cookie)
         } else {
+            // Here absence of the button is meaningful: this request follows a concrete sign action
+            // and verifies that the signable state disappeared.
             Result(HotuAccountPool.SignStatus.SUCCESS, "签到成功", cookie)
         }
     }
