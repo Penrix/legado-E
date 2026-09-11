@@ -12,20 +12,6 @@
         app:iconSpaceReserved="false" />
 
     <io.legado.app.lib.prefs.Preference
-        android:icon="@drawable/ic_cfg_web"
-        android:key="privateSites"
-        android:summary="内置小说、会员站、论坛、视频与导航"
-        android:title="私人站点"
-        app:iconSpaceReserved="false" />
-
-    <io.legado.app.lib.prefs.Preference
-        android:icon="@drawable/ic_cfg_source"
-        android:key="hotuAccountPool"
-        android:summary="多账号登录态、自动签到与当前阅读账号"
-        android:title="河图账号池"
-        app:iconSpaceReserved="false" />
-
-    <io.legado.app.lib.prefs.Preference
         android:icon="@drawable/ic_cfg_source"
         android:key="txtTocRuleManage"
         android:summary="@string/config_txt_toc_rule"
