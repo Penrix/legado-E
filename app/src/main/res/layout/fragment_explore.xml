@@ -26,16 +26,16 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/title_bar">
 
-        <com.google.android.material.chip.ChipGroup
+        <LinearLayout
             android:id="@+id/private_site_group"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
             android:paddingStart="8dp"
             android:paddingTop="6dp"
             android:paddingEnd="8dp"
-            android:paddingBottom="4dp"
-            app:chipSpacingHorizontal="6dp"
-            app:singleLine="true" />
+            android:paddingBottom="4dp" />
 
     </HorizontalScrollView>
 
