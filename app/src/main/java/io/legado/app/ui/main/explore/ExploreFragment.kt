@@ -5,6 +5,8 @@ import android.view.Menu
 import android.view.MenuItem
 import android.view.SubMenu
 import android.view.View
+import android.widget.LinearLayout
+import androidx.appcompat.widget.AppCompatButton
 import androidx.appcompat.widget.SearchView
 import androidx.core.view.isGone
 import androidx.fragment.app.viewModels
@@ -12,7 +14,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.google.android.material.chip.Chip
 import io.legado.app.R
 import io.legado.app.base.VMBaseFragment
 import io.legado.app.constant.AppLog
@@ -92,12 +93,12 @@ class ExploreFragment() : VMBaseFragment<ExploreViewModel>(R.layout.fragment_exp
     private fun initPrivateSiteHub() {
         binding.privateSiteGroup.removeAllViews()
 
-        binding.privateSiteGroup.addView(siteChip("搜书") {
+        binding.privateSiteGroup.addView(siteButton("搜书") {
             SearchActivity.start(requireContext(), key = null, searchScope = null)
         })
 
         PrivateSiteRegistry.profiles.forEach { site ->
-            binding.privateSiteGroup.addView(siteChip(site.displayName) {
+            binding.privateSiteGroup.addView(siteButton(site.displayName) {
                 startActivity<WebViewActivity> {
                     putExtra("url", site.startUrl)
                     putExtra("title", site.displayName)
@@ -107,11 +108,27 @@ class ExploreFragment() : VMBaseFragment<ExploreViewModel>(R.layout.fragment_exp
         }
     }
 
-    private fun siteChip(label: String, onClick: () -> Unit): Chip {
-        return Chip(requireContext()).apply {
+    private fun siteButton(label: String, onClick: () -> Unit): AppCompatButton {
+        val density = resources.displayMetrics.density
+        return AppCompatButton(requireContext()).apply {
             text = label
-            isCheckable = false
-            isClickable = true
+            isAllCaps = false
+            minWidth = 0
+            minimumWidth = 0
+            minHeight = 0
+            minimumHeight = 0
+            setPadding(
+                (12 * density).toInt(),
+                (6 * density).toInt(),
+                (12 * density).toInt(),
+                (6 * density).toInt()
+            )
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                marginEnd = (6 * density).toInt()
+            }
             setOnClickListener { onClick() }
         }
     }
