@@ -1,5 +1,5 @@
 {
-  "bookSourceComment": "Penrix 私人版 TWKAN。搜索同时尝试用户原始关键词与简转繁关键词，解决同站索引简繁混存导致的漏书；搜索结果、详情、目录与正文统一转简。正文净化直接在章节 HTML 内全局删除 TWKAN 域名/记住本站/Google 搜索等内嵌推广，避免广告与正文处于同一行时漏进原生阅读和 TTS。",
+  "bookSourceComment": "Penrix 私人版 TWKAN。搜索同时尝试用户原始关键词与简转繁关键词，解决同站索引简繁混存导致的漏书；搜索结果、详情、目录与正文统一转简。正文净化先做 Unicode 兼容分解并剥离组合音符，把花体/叠加音符域名还原成可识别的 twkan.com，再全局删除记域名、追台湾小说、Google 搜索、分享等内嵌推广，避免广告进入原生阅读和 TTS。",
   "bookSourceGroup": "Penrix 内置",
   "bookSourceName": "TWKAN Pure",
   "bookSourceType": 0,
@@ -38,7 +38,7 @@
     "title": "<js>java.t2s(String(java.getString('h1@text')||''))</js>",
     "content": "#txtcontent0@html||#txtcontent@html||.txtnav@html",
     "nextContentUrl": "",
-    "replaceRegex": "<js>\nvar Normalizer=Packages.java.text.Normalizer;\nvar Form=Packages.java.text.Normalizer.Form.NFKC;\nvar html=String(Normalizer.normalize(String(result||''),Form));\n// TWKAN injects promotion inside the same HTML/text flow as the novel body. Do global\n// substitutions before Legado turns the HTML into reader text; line-based filtering misses it.\nhtml=html.replace(/〖[^〗]{0,500}[記记]住本站域名[^〗]{0,500}〗/gi,'');\nhtml=html.replace(/〖[^〗]{0,500}(?:twkan|69shux)[^〗]{0,500}〗/gi,'');\nhtml=html.replace(/(?:GOOGLE\\s*搜索\\s*TWKAN|把本網(?:站)?分享到[^<\\r\\n]{0,220}|把本网站分享到[^<\\r\\n]{0,220})/gi,'');\nhtml=html.replace(/(?:台|臺)[灣湾](?:小[説說说]|小說|小说)(?:網|网)[^<\\r\\n]{0,180}(?:twkan\\.com)?/gi,function(m){return /twkan|本站域名|分享|搜索/i.test(m)?'':m;});\nhtml=html.replace(/(?:www\\.)?(?:twkan|69shux)\\.com/gi,'');\nhtml=html.replace(/(?:<p[^>]*>\\s*)?本章完[。.!！]?\\s*(?:<\\/p>)?/gi,'');\nhtml=html.replace(/(?:<br\\s*\\/?>\\s*){3,}/gi,'<br><br>');\njava.t2s(html);\n</js>"
+    "replaceRegex": "<js>\nvar Normalizer=Packages.java.text.Normalizer;\nvar Form=Packages.java.text.Normalizer.Form;\nvar html=String(Normalizer.normalize(String(result||''),Form.NFKD));\n// TWKAN now decorates Latin letters with stacked combining marks. Strip marks first so\n// t+marks w+marks k+marks a+marks n.com becomes the stable token twkan.com.\nhtml=html.replace(/[\\u0300-\\u036f\\u1ab0-\\u1aff\\u1dc0-\\u1dff\\u20d0-\\u20ff\\ufe20-\\ufe2f]/g,'');\n// Drop complete bracketed promotion blocks, including current '记一下我们域名 / 追台湾小说 / 超靠谱' variants.\nhtml=html.replace(/[【〖\\[](?=[^】〗\\]]{0,800}(?:[記记](?:住本站|一下我们)域名|追(?:台|臺)[灣湾]小说|(?:twkan|69shux)\\s*\\.\\s*com|超靠谱|GOOGLE\\s*搜索\\s*TWKAN))[^】〗\\]]{0,800}[】〗\\]]/gi,'');\n// Same promotion can occasionally arrive without brackets or with markup splitting the surrounding block.\nhtml=html.replace(/写到这里[^<\\r\\n]{0,500}(?:[記记]一下我们域名|追(?:台|臺)[灣湾]小说|twkan\\s*\\.\\s*com|超靠谱)[^<\\r\\n]{0,500}/gi,'');\nhtml=html.replace(/〖[^〗]{0,500}[記记]住本站域名[^〗]{0,500}〗/gi,'');\nhtml=html.replace(/〖[^〗]{0,500}(?:twkan|69shux)[^〗]{0,500}〗/gi,'');\nhtml=html.replace(/(?:GOOGLE\\s*搜索\\s*TWKAN|把本網(?:站)?分享到[^<\\r\\n]{0,220}|把本网站分享到[^<\\r\\n]{0,220})/gi,'');\nhtml=html.replace(/(?:台|臺)[灣湾](?:小[説說说]|小說|小说)(?:網|网)[^<\\r\\n]{0,180}(?:twkan\\.com)?/gi,function(m){return /twkan|本站域名|我们域名|分享|搜索|超靠谱/i.test(m)?'':m;});\nhtml=html.replace(/(?:www\\.)?(?:twkan|69shux)\\s*\\.\\s*com/gi,'');\nhtml=html.replace(/(?:<p[^>]*>\\s*)?本章完[。.!！]?\\s*(?:<\\/p>)?/gi,'');\nhtml=html.replace(/(?:<br\\s*\\/?>\\s*){3,}/gi,'<br><br>');\nhtml=String(Normalizer.normalize(html,Form.NFKC));\njava.t2s(html);\n</js>"
   },
-  "lastUpdateTime": "1789095600000"
+  "lastUpdateTime": "1789189200000"
 }
