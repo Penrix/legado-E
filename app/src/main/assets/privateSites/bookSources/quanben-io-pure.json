@@ -1,5 +1,5 @@
 {
-  "bookSourceComment": "Penrix 私人版内置全本小说 quanben.io。初始规则曾参考社区可用版本，现由私人版独立维护；保留无需 WebView 的正文解密和完整目录拼接，使用稳定移动 UA，并清理正文推广。",
+  "bookSourceComment": "Penrix 私人版内置全本小说 quanben.io。保留无需 WebView 的目录加载与完整目录拼接，使用稳定移动 UA；当前站点正文已可直接读取，移除已过时的 2025 字符位移解码，避免把正常正文主动破坏成乱码，并继续清理正文推广。",
   "bookSourceGroup": "Penrix 内置",
   "bookSourceName": "全本小说 Pure",
   "bookSourceType": 0,
@@ -10,7 +10,7 @@
   "enabledCookieJar": true,
   "enabledExplore": true,
   "header": "{\"User-Agent\":\"Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0 Mobile Safari/537.36\",\"Referer\":\"https://www.quanben.io/\"}",
-  "jsLib": "function penrixBase64(s){var chars='PXhw7UT1B0a9kQDKZsjIASmOezxYG4CHo5Jyfg2b8FLpEvRr3WtVnlqMidu6cN';var out='';for(var i=0;i<s.length;i++){var n=chars.indexOf(s[i]);var c=n<0?s[i]:chars[(n+3)%62];var n1=parseInt(Math.random()*62,10);var n2=parseInt(Math.random()*62,10);out+=chars[n1]+c+chars[n2];}return out;}function penrixShiftEntities(str){var arr=[];for(var i=0;i<str.length;i++){var r=str.charCodeAt(i);arr.push('&#'+(r>=0&&r<=127?r:r-1)+';');}return arr.join('');}function penrixProcessHTML(html){var re=/<p\\b[^>]*>.*?<\\/p>/gis;var ps=html.match(re)||[];for(var i=10;i<ps.length;i++){if(i===10||i===11){ps[i]=ps[i].replace(/(<p\\b[^>]*>).*?(<\\/p>)/s,'$1...$2');}else if(i%2===0){var m=ps[i].match(/<p\\b[^>]*>(.*?)<\\/p>/s);if(m){var attrs=(ps[i].match(/<p\\b([^>]*)>/s)||['',''])[1];ps[i]='<p'+attrs+'>'+penrixShiftEntities(m[1])+'</p>';}}}var idx=0;return html.replace(re,function(){var v=ps[idx]||'';idx++;return v;});}",
+  "jsLib": "function penrixBase64(s){var chars='PXhw7UT1B0a9kQDKZsjIASmOezxYG4CHo5Jyfg2b8FLpEvRr3WtVnlqMidu6cN';var out='';for(var i=0;i<s.length;i++){var n=chars.indexOf(s[i]);var c=n<0?s[i]:chars[(n+3)%62];var n1=parseInt(Math.random()*62,10);var n2=parseInt(Math.random()*62,10);out+=chars[n1]+c+chars[n2];}return out;}",
   "searchUrl": "/index.php?c=book&a=search&keywords={{key}}",
   "exploreUrl": "玄幻::/c/xuanhuan_{{page}}.html\n都市::/c/dushi_{{page}}.html\n历史::/c/lishi_{{page}}.html\n仙侠::/c/xianxia_{{page}}.html\n科幻::/c/kehuan_{{page}}.html\n游戏::/c/youxi_{{page}}.html\n悬疑::/c/xuanyi_{{page}}.html\n军事::/c/junshi_{{page}}.html\n其它::/c/qita_{{page}}.html",
   "ruleSearch": {
@@ -36,8 +36,8 @@
     "chapterUrl": "href"
   },
   "ruleContent": {
-    "content": "#content p@html<js>penrixProcessHTML(String(result||''));</js>",
-    "replaceRegex": "##\\s*(?:请记住本站域名|最新网址|本章完|手机阅读请访问|收藏本站).*?$"
+    "content": "#content p@html",
+    "replaceRegex": "##(?:请到\\s*(?:www\\.)?quanben\\.io\\s*阅读完整章节内容|请记住本站域名[^\\r\\n<]*|最新网址[^\\r\\n<]*|手机阅读请访问[^\\r\\n<]*|收藏本站[^\\r\\n<]*|本章完[。.!！]?)"
   },
-  "lastUpdateTime": "1789095600000"
+  "lastUpdateTime": "1789189200000"
 }
